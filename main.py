@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI
 from app.config import settings
+from app.middleware.logging_middleware import LoggingMiddleware
 
 # Setup logging configuration based on settings
 logging.basicConfig(
@@ -15,6 +16,9 @@ app = FastAPI(
     description="Repository Intelligence Platform for Engineering Analysis",
     version="1.0.0",
 )
+
+# Register custom logging and timing middleware
+app.add_middleware(LoggingMiddleware)
 
 @app.get("/health", tags=["System"])
 def health_check():
