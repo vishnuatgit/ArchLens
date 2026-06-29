@@ -85,3 +85,48 @@ class GitHubService:
             except Exception as e:
                 logger.error(f"Network error fetching languages for {owner}/{repo}: {str(e)}")
                 raise e
+
+    async def fetch_contributors(self, owner: str, repo: str, per_page: int = 100) -> list:
+        """
+        Fetches the list of contributors for a repository.
+        Endpoint: GET /repos/{owner}/{repo}/contributors
+        """
+        url = f"{self.base_url}/repos/{owner}/{repo}/contributors?per_page={per_page}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=self.headers, timeout=10.0)
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                # 204 No Content can occur for empty repositories
+                if e.response.status_code == 204:
+                    return []
+                logger.error(f"GitHub API error fetching contributors for {owner}/{repo}: {e.response.status_code}")
+                raise e
+            except Exception as e:
+                logger.error(f"Network error fetching contributors for {owner}/{repo}: {str(e)}")
+                raise e
+
+    async def fetch_contents(self, owner: str, repo: str, path: str = "") -> list:
+        """
+        Fetches the contents of a directory or file in the repository (default root).
+        Endpoint: GET /repos/{owner}/{repo}/contents/{path}
+        """
+        url = f"{self.base_url}/repos/{owner}/{repo}/contents/{path}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=self.headers, timeout=10.0)
+                response.raise_for_status()
+                # If path points to a file rather than directory, response can be dict, not list.
+                # Standardizing returns as a list or dict based on GitHub API.
+                data = response.json()
+                return data if isinstance(data, list) else [data]
+            except httpx.HTTPStatusError as e:
+                # 404 can occur if the folder/file doesn't exist
+                if e.response.status_code == 404:
+                    return []
+                logger.error(f"GitHub API error fetching contents for {owner}/{repo} at path '{path}': {e.response.status_code}")
+                raise e
+            except Exception as e:
+                logger.error(f"Network error fetching contents for {owner}/{repo} at path '{path}': {str(e)}")
+                raise e
