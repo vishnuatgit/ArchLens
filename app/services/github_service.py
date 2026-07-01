@@ -34,8 +34,17 @@ def parse_github_url(url: str) -> Tuple[Optional[str], Optional[str]]:
         return None, None
     
     url = url.strip()
+    
+    # Strip trailing slash if present
+    if url.endswith("/"):
+        url = url[:-1]
+        
+    # Strip trailing .git if present
+    if url.endswith(".git"):
+        url = url[:-4]
+        
     # Regex to capture the owner and repository name
-    pattern = r"(?:https?://)?(?:www\.)?github\.com/([^/]+)/([^/\s\?#]+)(?:\.git)?(?:/|$)"
+    pattern = r"(?:https?://)?(?:www\.)?github\.com/([^/]+)/([^/\s\?#]+)(?:/|$)"
     match = re.search(pattern, url, re.IGNORECASE)
     if match:
         owner, repo = match.group(1), match.group(2)
