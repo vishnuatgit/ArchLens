@@ -194,15 +194,102 @@ class MetricsService:
 
     def calculate_community_score(self, metadata: Dict[str, Any], contributor_count: int) -> Tuple[int, List[str], List[str], List[str]]:
         """
-        Evaluates repository community engagement metrics (Max: 20 points). Placeholder.
+        Evaluates repository community engagement based on stars, forks, and contributors (Max: 20 points).
+        Checks for:
+          - Stars count (6 pts)
+          - Forks count (6 pts)
+          - Unique contributor count (8 pts)
         """
-        return 0, [], [], []
+        score = 0
+        strengths = []
+        weaknesses = []
+        suggestions = []
+
+        stars = metadata.get("stargazers_count", 0) or 0
+        forks = metadata.get("forks_count", 0) or 0
+
+        # Stars scoring (6 points)
+        if stars >= 50:
+            score += 6
+            strengths.append(f"Strong community interest with {stars} stars.")
+        elif stars >= 10:
+            score += 3
+            strengths.append(f"Growing community interest with {stars} stars.")
+        else:
+            weaknesses.append(f"Low community visibility with only {stars} star(s).")
+            suggestions.append("Promote your repository on developer communities to attract more visibility.")
+
+        # Forks scoring (6 points)
+        if forks >= 20:
+            score += 6
+            strengths.append(f"High fork count ({forks}) indicates active reuse and collaboration.")
+        elif forks >= 5:
+            score += 3
+            strengths.append(f"Moderate fork activity ({forks} forks).")
+        else:
+            weaknesses.append(f"Low fork count ({forks}) suggests limited external collaboration.")
+            suggestions.append("Make the project easier to fork and contribute to by improving documentation.")
+
+        # Contributors scoring (8 points)
+        if contributor_count >= 5:
+            score += 8
+            strengths.append(f"Active contributor base with {contributor_count} contributors.")
+        elif contributor_count >= 2:
+            score += 4
+            strengths.append(f"Small but active contributor group ({contributor_count} contributors).")
+        else:
+            weaknesses.append("Only a single contributor — repository lacks collaboration.")
+            suggestions.append("Open issues for good first contributions and invite collaborators.")
+
+        return score, strengths, weaknesses, suggestions
 
     def calculate_maintainability_score(self, metadata: Dict[str, Any], workflow_contents: List[Dict[str, Any]]) -> Tuple[int, List[str], List[str], List[str]]:
         """
-        Evaluates repository maintenance and test configuration metrics (Max: 20 points). Placeholder.
+        Evaluates CI/CD setup, open issue management, and repository size health (Max: 20 points).
+        Checks for:
+          - GitHub Actions workflows present (8 pts)
+          - Open issues ratio (6 pts)
+          - Repository size health (6 pts)
         """
-        return 0, [], [], []
+        score = 0
+        strengths = []
+        weaknesses = []
+        suggestions = []
+
+        # CI/CD workflows scoring (8 points)
+        has_workflows = len(workflow_contents) > 0
+        if has_workflows:
+            score += 8
+            strengths.append(f"Found {len(workflow_contents)} GitHub Actions workflow(s) for automated CI/CD.")
+        else:
+            weaknesses.append("No GitHub Actions workflows detected in .github/workflows/.")
+            suggestions.append("Add a GitHub Actions workflow to automate testing and linting on every push.")
+
+        # Open issues scoring (6 points)
+        open_issues = metadata.get("open_issues_count", 0) or 0
+        if open_issues == 0:
+            score += 6
+            strengths.append("Zero open issues — repository is well-maintained.")
+        elif open_issues <= 10:
+            score += 3
+            strengths.append(f"Manageable open issue count ({open_issues} issues).")
+        else:
+            weaknesses.append(f"High open issue count ({open_issues}) may indicate maintenance debt.")
+            suggestions.append("Triage and close stale open issues to demonstrate active maintenance.")
+
+        # Repository size scoring (6 points)
+        repo_size_kb = metadata.get("size", 0) or 0
+        if repo_size_kb <= 50000:  # up to ~50MB
+            score += 6
+            strengths.append("Repository size is lean and well-managed.")
+        elif repo_size_kb <= 200000:  # up to ~200MB
+            score += 3
+            strengths.append("Repository size is moderate.")
+        else:
+            weaknesses.append(f"Repository is large ({repo_size_kb // 1024}MB) — consider cleaning up binaries or large assets.")
+            suggestions.append("Use .gitignore to exclude build artifacts, binaries, and large generated files.")
+
+        return score, strengths, weaknesses, suggestions
 
     def calculate_overall_report(
         self,
@@ -214,31 +301,29 @@ class MetricsService:
         workflow_contents: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
-        Orchestrates full scoring report calculation by executing all scoring dimensions.
+        Orchestrates the full scoring report by executing all five scoring dimensions
+        and consolidating the results into a single structured output.
         """
         doc_score, doc_str, doc_weak, doc_sug = self.calculate_documentation_score(root_contents)
         act_score, act_str, act_weak, act_sug = self.calculate_activity_score(metadata, recent_commits)
         org_score, org_str, org_weak, org_sug = self.calculate_organization_score(root_contents)
+        com_score, com_str, com_weak, com_sug = self.calculate_community_score(metadata, contributor_count)
+        mnt_score, mnt_str, mnt_weak, mnt_sug = self.calculate_maintainability_score(metadata, workflow_contents)
 
         breakdown = {
             "documentation": doc_score,
             "activity": act_score,
             "organization": org_score,
-            "community": 0,
-            "maintainability": 0
+            "community": com_score,
+            "maintainability": mnt_score
         }
 
-        # Consolidate all metrics (remaining 40 pts are placeholders)
-        overall_score = doc_score + act_score + org_score
-
-        strengths = doc_str + act_str + org_str
-        weaknesses = doc_weak + act_weak + org_weak
-        suggestions = doc_sug + act_sug + org_sug
+        overall_score = min(100, doc_score + act_score + org_score + com_score + mnt_score)
 
         return {
             "overall_score": overall_score,
             "breakdown": breakdown,
-            "strengths": strengths,
-            "weaknesses": weaknesses,
-            "suggestions": suggestions
+            "strengths": doc_str + act_str + org_str + com_str + mnt_str,
+            "weaknesses": doc_weak + act_weak + org_weak + com_weak + mnt_weak,
+            "suggestions": doc_sug + act_sug + org_sug + com_sug + mnt_sug
         }
