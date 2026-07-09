@@ -1,5 +1,8 @@
 import logging
+from pathlib import Path
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from app.config import settings
 from app.middleware.logging_middleware import LoggingMiddleware
 
@@ -9,6 +12,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("ArchLens")
+
+# Resolve template and static directories relative to this file
+BASE_DIR = Path(__file__).resolve().parent
 
 # Initialize the main FastAPI application
 app = FastAPI(
@@ -20,6 +26,12 @@ app = FastAPI(
 # Register custom logging and timing middleware
 app.add_middleware(LoggingMiddleware)
 
+# Mount the static files directory for CSS, JS, and images
+app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static")
+
+# Configure Jinja2 templates engine
+templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
+
 @app.get("/health", tags=["System"])
 def health_check():
     """
@@ -30,13 +42,4 @@ def health_check():
         "status": "healthy",
         "app": "ArchLens",
         "version": "1.0.0",
-    }
-
-@app.get("/", tags=["System"])
-def root():
-    """
-    Temporary root endpoint to verify application execution.
-    """
-    return {
-        "message": "Welcome to ArchLens. Visit /docs for the API documentation."
     }
