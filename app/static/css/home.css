@@ -1,0 +1,215 @@
+/* =========================================================
+   Home Page Styles
+   ========================================================= */
+
+/* --- Hero --- */
+.hero {
+    padding: var(--space-16) 0 var(--space-10);
+    text-align: center;
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.hero-label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(79, 142, 247, 0.25);
+    padding: 4px 14px;
+    border-radius: 99px;
+    margin-bottom: var(--space-5);
+}
+
+.hero-title {
+    font-size: 2.6rem;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 1.15;
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+}
+
+.hero-subtitle {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin-bottom: var(--space-10);
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* --- Analysis Form --- */
+.analyze-form {
+    text-align: left;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-lg);
+}
+
+.form-row {
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-end;
+}
+
+.form-input-lg {
+    padding: 14px var(--space-5);
+    font-size: 0.95rem;
+    border-radius: var(--radius-md);
+}
+
+.form-btn-wrap {
+    flex-shrink: 0;
+    padding-top: 22px; /* align with input accounting for label height */
+}
+
+/* --- Dimension Tags --- */
+.dimension-tags {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-6);
+}
+
+.dim-tag {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 4px 12px;
+    border-radius: 99px;
+    transition: color var(--transition), border-color var(--transition);
+}
+
+.dim-tag:hover {
+    color: var(--text-secondary);
+    border-color: var(--border-default);
+}
+
+/* --- Section Header --- */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-5);
+}
+
+.section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+.btn-sm {
+    padding: 6px var(--space-4);
+    font-size: 0.8rem;
+    border-radius: var(--radius-sm);
+}
+
+/* --- Scan List --- */
+.scan-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.scan-item {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: background var(--transition);
+}
+
+.scan-item:hover {
+    background: var(--bg-elevated);
+}
+
+.scan-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: inherit;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.scan-link:hover {
+    border-color: var(--border-default);
+    box-shadow: var(--shadow-sm);
+    color: inherit;
+}
+
+.scan-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.scan-repo {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.scan-meta {
+    color: var(--text-muted);
+}
+
+.scan-score-wrap {
+    flex-shrink: 0;
+}
+
+/* --- Empty State --- */
+.empty-state {
+    text-align: center;
+    padding: var(--space-16) 0;
+}
+
+.empty-icon {
+    font-size: 2rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+    opacity: 0.4;
+}
+
+.empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+}
+
+/* --- Recent Section --- */
+.recent-section {
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+/* --- Responsive --- */
+@media (max-width: 600px) {
+    .hero-title { font-size: 1.9rem; }
+
+    .form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .form-btn-wrap {
+        padding-top: 0;
+    }
+
+    .form-btn-wrap .btn {
+        width: 100%;
+    }
+}

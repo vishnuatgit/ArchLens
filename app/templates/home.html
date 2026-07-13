@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}ArchLens - Analyze a Repository{% endblock %}
+{% block meta_description %}ArchLens analyzes any public GitHub repository and gives it an engineering score across documentation, activity, community, organization, and maintainability.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/home.css" />
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-label">Repository Intelligence</div>
+    <h1 class="hero-title">How strong is your codebase?</h1>
+    <p class="hero-subtitle">
+        Paste any public GitHub repository URL and get an engineering score across
+        five dimensions in seconds.
+    </p>
+
+    <!-- Analysis Form -->
+    <form id="analyze-form" class="analyze-form" method="POST" action="/analyze">
+        <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="repo-url">GitHub Repository URL</label>
+                <input
+                    id="repo-url"
+                    class="form-input form-input-lg"
+                    type="url"
+                    name="url"
+                    placeholder="https://github.com/owner/repository"
+                    required
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+            </div>
+            <div class="form-btn-wrap">
+                <button id="analyze-btn" class="btn btn-primary btn-lg" type="submit">
+                    <span id="btn-label">Analyze</span>
+                    <span class="spinner" id="btn-spinner"></span>
+                </button>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-error mt-4" id="form-error" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+    </form>
+
+    <!-- Dimension Tags -->
+    <div class="dimension-tags">
+        <span class="dim-tag">Documentation</span>
+        <span class="dim-tag">Activity</span>
+        <span class="dim-tag">Organization</span>
+        <span class="dim-tag">Community</span>
+        <span class="dim-tag">Maintainability</span>
+    </div>
+</section>
+
+<hr class="divider" />
+
+<!-- Recent Scans Section -->
+{% if recent_analyses %}
+<section class="recent-section">
+    <div class="section-header">
+        <h2 class="section-title">Recent Scans</h2>
+        <a href="/history" class="btn btn-secondary btn-sm">View All</a>
+    </div>
+
+    <ul class="scan-list" id="recent-scan-list">
+        {% for item in recent_analyses %}
+        <li class="scan-item">
+            <a href="/analysis/{{ item.id }}" class="scan-link">
+                <div class="scan-info">
+                    <span class="scan-repo mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
+                    <span class="scan-meta text-muted text-xs">
+                        {{ item.created_at.strftime("%b %d, %Y") }}
+                        &middot;
+                        {{ "%.2f"|format(item.duration) }}s
+                    </span>
+                </div>
+                <div class="scan-score-wrap">
+                    {% if item.score >= 70 %}
+                    <span class="score-badge score-high">{{ item.score }}</span>
+                    {% elif item.score >= 40 %}
+                    <span class="score-badge score-mid">{{ item.score }}</span>
+                    {% else %}
+                    <span class="score-badge score-low">{{ item.score }}</span>
+                    {% endif %}
+                </div>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% else %}
+<section class="empty-state">
+    <div class="empty-icon">&#9673;</div>
+    <p class="empty-title">No analyses yet</p>
+    <p class="text-secondary text-sm">Submit a GitHub URL above to run your first scan.</p>
+</section>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const form = document.getElementById('analyze-form');
+    const btn  = document.getElementById('analyze-btn');
+    const label  = document.getElementById('btn-label');
+    const spinner = document.getElementById('btn-spinner');
+
+    form.addEventListener('submit', function () {
+        label.textContent = 'Analyzing...';
+        spinner.style.display = 'block';
+        btn.disabled = true;
+    });
+</script>
+{% endblock %}
