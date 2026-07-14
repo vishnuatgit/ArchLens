@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}{{ owner }}/{{ name }} &mdash; ArchLens{% endblock %}
+{% block meta_description %}Engineering analysis for {{ owner }}/{{ name }}. Overall score: {{ score }}/100 across documentation, activity, organization, community, and maintainability.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/results.css" />
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="results-header">
+    <div class="results-breadcrumb">
+        <a href="/" class="breadcrumb-link">Analyze</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current mono">{{ owner }}/{{ name }}</span>
+    </div>
+
+    <div class="results-meta-row">
+        <div>
+            <h1 class="results-repo-title mono">{{ owner }}/{{ name }}</h1>
+            <p class="results-sub text-secondary text-sm">
+                Scanned on {{ created_at.strftime("%B %d, %Y at %H:%M UTC") }}
+                &middot; Completed in {{ "%.2f"|format(duration) }}s
+            </p>
+        </div>
+        <a href="https://github.com/{{ owner }}/{{ name }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+            View on GitHub
+        </a>
+    </div>
+</div>
+
+<!-- Score + Breakdown Grid -->
+<div class="results-top-grid">
+
+    <!-- Overall Score Gauge -->
+    <div class="card score-card">
+        <p class="card-title">Overall Score</p>
+
+        <div class="gauge-wrap" aria-label="Overall score: {{ score }} out of 100">
+            <svg class="gauge-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <!-- Background track -->
+                <circle class="gauge-track" cx="60" cy="60" r="50"
+                    fill="none" stroke-width="10" />
+                <!-- Score arc filled dynamically via CSS variable -->
+                <circle class="gauge-fill" cx="60" cy="60" r="50"
+                    fill="none" stroke-width="10"
+                    style="--score: {{ score }};" />
+            </svg>
+            <div class="gauge-label">
+                <span class="gauge-number
+                    {% if score >= 70 %}gauge-high
+                    {% elif score >= 40 %}gauge-mid
+                    {% else %}gauge-low{% endif %}">{{ score }}</span>
+                <span class="gauge-total">/100</span>
+            </div>
+        </div>
+
+        <div class="score-tier-label
+            {% if score >= 70 %}tier-strong
+            {% elif score >= 40 %}tier-moderate
+            {% else %}tier-weak{% endif %}">
+            {% if score >= 70 %}Strong
+            {% elif score >= 40 %}Moderate
+            {% else %}Needs Work{% endif %}
+        </div>
+    </div>
+
+    <!-- Dimension Breakdown -->
+    <div class="card breakdown-card">
+        <p class="card-title">Dimension Breakdown</p>
+        <ul class="breakdown-list">
+            {% set dims = [
+                ("Documentation", breakdown.documentation, 20),
+                ("Activity",      breakdown.activity,      20),
+                ("Organization",  breakdown.organization,  20),
+                ("Community",     breakdown.community,     20),
+                ("Maintainability", breakdown.maintainability, 20)
+            ] %}
+            {% for label, val, max_val in dims %}
+            <li class="breakdown-row">
+                <div class="breakdown-row-top">
+                    <span class="breakdown-label">{{ label }}</span>
+                    <span class="breakdown-val mono">{{ val }}<span class="text-muted">/{{ max_val }}</span></span>
+                </div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill
+                        {% if (val / max_val) >= 0.7 %}bar-high
+                        {% elif (val / max_val) >= 0.4 %}bar-mid
+                        {% else %}bar-low{% endif %}"
+                        style="width: {{ (val / max_val * 100)|int }}%;">
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+</div>
+
+<!-- Repository Metadata Strip -->
+<div class="metrics-strip">
+    <div class="metric-tile">
+        <span class="metric-value">{{ stars }}</span>
+        <span class="metric-label">Stars</span>
+    </div>
+    <div class="metric-tile">
+        <span class="metric-value">{{ forks }}</span>
+        <span class="metric-label">Forks</span>
+    </div>
+    <div class="metric-tile">
+        <span class="metric-value">{{ open_issues }}</span>
+        <span class="metric-label">Open Issues</span>
+    </div>
+    <div class="metric-tile">
+        <span class="metric-value">{{ contributor_count }}</span>
+        <span class="metric-label">Contributors</span>
+    </div>
+    <div class="metric-tile">
+        <span class="metric-value">{{ (repo_size / 1024)|round(1) }} MB</span>
+        <span class="metric-label">Size</span>
+    </div>
+    <div class="metric-tile">
+        <span class="metric-value">{{ language_count }}</span>
+        <span class="metric-label">Languages</span>
+    </div>
+</div>
+
+<!-- Language Distribution -->
+{% if languages %}
+<div class="card lang-card mt-6">
+    <p class="card-title">Language Distribution</p>
+    <div class="lang-bar-wrap" role="img" aria-label="Language distribution">
+        {% for lang, pct in languages.items() %}
+        <div class="lang-segment" style="width: {{ pct }}%;" title="{{ lang }}: {{ pct }}%"></div>
+        {% endfor %}
+    </div>
+    <ul class="lang-legend">
+        {% for lang, pct in languages.items() %}
+        <li class="lang-legend-item">
+            <span class="lang-dot"></span>
+            <span class="text-sm">{{ lang }}</span>
+            <span class="text-xs text-muted mono">{{ pct }}%</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- Strengths / Weaknesses / Suggestions -->
+<div class="findings-grid mt-6">
+
+    <!-- Strengths -->
+    {% if strengths %}
+    <div class="card findings-card">
+        <div class="card-header">
+            <span class="card-title">Strengths</span>
+            <span class="findings-count findings-count-green">{{ strengths|length }}</span>
+        </div>
+        <ul class="findings-list">
+            {% for item in strengths %}
+            <li class="finding-item finding-strength">
+                <span class="finding-dot dot-green"></span>
+                <span class="text-sm">{{ item }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Weaknesses -->
+    {% if weaknesses %}
+    <div class="card findings-card">
+        <div class="card-header">
+            <span class="card-title">Weaknesses</span>
+            <span class="findings-count findings-count-red">{{ weaknesses|length }}</span>
+        </div>
+        <ul class="findings-list">
+            {% for item in weaknesses %}
+            <li class="finding-item finding-weakness">
+                <span class="finding-dot dot-red"></span>
+                <span class="text-sm">{{ item }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Suggestions -->
+{% if suggestions %}
+<div class="card suggestions-card mt-6">
+    <div class="card-header">
+        <span class="card-title">Recommendations</span>
+        <span class="findings-count findings-count-amber">{{ suggestions|length }}</span>
+    </div>
+    <ul class="suggestions-list">
+        {% for item in suggestions %}
+        <li class="suggestion-item">
+            <span class="suggestion-index mono text-muted">{{ loop.index }}</span>
+            <span class="text-sm">{{ item }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- Footer Actions -->
+<div class="results-footer-actions mt-8">
+    <a href="/" class="btn btn-secondary">Run Another Analysis</a>
+    <a href="/history" class="btn btn-secondary">View History</a>
+</div>
+
+{% endblock %}
