@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from app.config import settings
 from app.middleware.logging_middleware import LoggingMiddleware
+from app.routers import web
 
 # Setup logging configuration based on settings
 logging.basicConfig(
@@ -29,8 +30,8 @@ app.add_middleware(LoggingMiddleware)
 # Mount the static files directory for CSS, JS, and images
 app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static")
 
-# Configure Jinja2 templates engine
-templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
+# Register web page routes
+app.include_router(web.router)
 
 @app.get("/health", tags=["System"])
 def health_check():

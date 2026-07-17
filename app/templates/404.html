@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Not Found &mdash; ArchLens{% endblock %}
+
+{% block content %}
+<div class="empty-state" style="padding: var(--space-16) 0;">
+    <div style="font-size: 3rem; font-family: var(--font-mono); color: var(--text-muted); margin-bottom: var(--space-4);">404</div>
+    <p class="empty-title">Analysis not found</p>
+    <p class="text-secondary text-sm" style="margin-bottom: var(--space-8);">
+        That analysis ID does not exist or may have been removed.
+    </p>
+    <a href="/" class="btn btn-primary">Run a New Analysis</a>
+</div>
+{% endblock %}

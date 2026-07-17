@@ -1,0 +1,141 @@
+/* =========================================================
+   History Page Styles
+   ========================================================= */
+
+/* --- Card override for table layout --- */
+.history-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+/* --- Table Header Row --- */
+.history-table-header {
+    display: grid;
+    grid-template-columns: 1fr 80px 90px 120px 70px;
+    align-items: center;
+    padding: var(--space-3) var(--space-6);
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+    gap: var(--space-4);
+}
+
+.th {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+/* --- History List --- */
+.history-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.history-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 90px 120px 70px;
+    align-items: center;
+    padding: var(--space-4) var(--space-6);
+    gap: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background var(--transition);
+}
+
+.history-row:last-child {
+    border-bottom: none;
+}
+
+.history-row:hover {
+    background: var(--bg-elevated);
+}
+
+/* --- Columns --- */
+.history-repo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.history-repo-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-repo-url {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-score {
+    display: flex;
+    align-items: center;
+}
+
+.history-duration,
+.history-date {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.history-action {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* --- Pagination --- */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+    padding-bottom: var(--space-4);
+}
+
+.pagination-info {
+    min-width: 160px;
+    text-align: center;
+}
+
+/* --- Empty State (re-used from home) --- */
+.empty-state {
+    text-align: center;
+    padding: var(--space-16) 0;
+}
+
+.empty-icon {
+    font-size: 2rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+    opacity: 0.4;
+}
+
+.empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+}
+
+/* --- Responsive: hide secondary columns on small screens --- */
+@media (max-width: 700px) {
+    .history-table-header,
+    .history-row {
+        grid-template-columns: 1fr 80px 70px;
+    }
+
+    .th-hide,
+    .history-duration,
+    .history-date {
+        display: none;
+    }
+}

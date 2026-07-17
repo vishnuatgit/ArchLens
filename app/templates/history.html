@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis History &mdash; ArchLens{% endblock %}
+{% block meta_description %}Browse all previous repository analyses run through ArchLens, sorted by most recent.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/history.css" />
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header" style="text-align: left;">
+    <h1>Analysis History</h1>
+    <p class="text-secondary">All repository scans, ordered by most recent.</p>
+</div>
+
+{% if analyses %}
+<div class="card history-card">
+    <div class="history-table-header">
+        <span class="th">Repository</span>
+        <span class="th">Score</span>
+        <span class="th th-hide">Duration</span>
+        <span class="th th-hide">Date</span>
+        <span class="th"></span>
+    </div>
+
+    <ul class="history-list" id="history-list">
+        {% for item in analyses %}
+        <li class="history-row">
+            <div class="history-repo">
+                <span class="history-repo-name mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
+                <span class="history-repo-url text-muted text-xs">{{ item.repository.url }}</span>
+            </div>
+
+            <div class="history-score">
+                {% if item.score >= 70 %}
+                <span class="score-badge score-high">{{ item.score }}</span>
+                {% elif item.score >= 40 %}
+                <span class="score-badge score-mid">{{ item.score }}</span>
+                {% else %}
+                <span class="score-badge score-low">{{ item.score }}</span>
+                {% endif %}
+            </div>
+
+            <div class="history-duration th-hide">
+                <span class="text-sm text-secondary mono">{{ "%.2f"|format(item.duration) }}s</span>
+            </div>
+
+            <div class="history-date th-hide">
+                <span class="text-sm text-secondary">{{ item.created_at.strftime("%b %d, %Y") }}</span>
+                <span class="text-xs text-muted">{{ item.created_at.strftime("%H:%M UTC") }}</span>
+            </div>
+
+            <div class="history-action">
+                <a href="/analysis/{{ item.id }}" class="btn btn-secondary btn-sm">View</a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+{% if total > limit %}
+<div class="pagination">
+    {% if offset > 0 %}
+    <a href="/history?offset={{ [offset - limit, 0]|max }}&limit={{ limit }}" class="btn btn-secondary btn-sm">Previous</a>
+    {% endif %}
+    <span class="pagination-info text-secondary text-sm">
+        Showing {{ offset + 1 }}&ndash;{{ [offset + limit, total]|min }} of {{ total }}
+    </span>
+    {% if offset + limit < total %}
+    <a href="/history?offset={{ offset + limit }}&limit={{ limit }}" class="btn btn-secondary btn-sm">Next</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#9673;</div>
+    <p class="empty-title">No analyses yet</p>
+    <p class="text-secondary text-sm">Run your first scan from the <a href="/">Analyze</a> page.</p>
+</div>
+{% endif %}
+
+{% endblock %}
