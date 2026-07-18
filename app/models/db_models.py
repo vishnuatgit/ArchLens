@@ -3,10 +3,12 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Tex
 from sqlalchemy.orm import relationship
 from app.repositories.db import Base
 
+
 class Repository(Base):
     """
     SQLAlchemy model representing a GitHub repository submitted for analysis.
     """
+
     __tablename__ = "repositories"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -16,33 +18,45 @@ class Repository(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Establish one-to-many relationship with analysis records
-    analyses = relationship("Analysis", back_populates="repository", cascade="all, delete-orphan")
+    analyses = relationship(
+        "Analysis", back_populates="repository", cascade="all, delete-orphan"
+    )
+
 
 class Analysis(Base):
     """
     SQLAlchemy model representing a single analysis run for a repository.
     """
+
     __tablename__ = "analyses"
 
     id = Column(Integer, primary_key=True, index=True)
-    repository_id = Column(Integer, ForeignKey("repositories.id", ondelete="CASCADE"), nullable=False)
+    repository_id = Column(
+        Integer, ForeignKey("repositories.id", ondelete="CASCADE"), nullable=False
+    )
     score = Column(Integer, nullable=False)
     duration = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Establish relationships
     repository = relationship("Repository", back_populates="analyses")
-    metrics = relationship("Metric", uselist=False, back_populates="analysis", cascade="all, delete-orphan")
+    metrics = relationship(
+        "Metric", uselist=False, back_populates="analysis", cascade="all, delete-orphan"
+    )
+
 
 class Metric(Base):
     """
     SQLAlchemy model representing the parsed raw metrics and calculated scores.
     """
+
     __tablename__ = "metrics"
 
     id = Column(Integer, primary_key=True, index=True)
-    analysis_id = Column(Integer, ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False)
-    
+    analysis_id = Column(
+        Integer, ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False
+    )
+
     # Raw GitHub Stats
     stars = Column(Integer, nullable=False, default=0)
     forks = Column(Integer, nullable=False, default=0)
@@ -53,11 +67,19 @@ class Metric(Base):
     last_pushed = Column(DateTime, nullable=True)
 
     # Serialized JSON structures for complex breakdowns and recommendations
-    languages_json = Column(Text, nullable=True)          # e.g., {"Python": 80.5, "HTML": 19.5}
-    score_breakdown_json = Column(Text, nullable=True)    # e.g., {"documentation": 15, "activity": 18, ...}
-    strengths_json = Column(Text, nullable=True)          # e.g., ["Has README", "Active last 30 days"]
-    weaknesses_json = Column(Text, nullable=True)         # e.g., ["No LICENSE", "High open issue ratio"]
-    suggestions_json = Column(Text, nullable=True)        # e.g., ["Add a LICENSE file to define usage rules"]
+    languages_json = Column(Text, nullable=True)  # e.g., {"Python": 80.5, "HTML": 19.5}
+    score_breakdown_json = Column(
+        Text, nullable=True
+    )  # e.g., {"documentation": 15, "activity": 18, ...}
+    strengths_json = Column(
+        Text, nullable=True
+    )  # e.g., ["Has README", "Active last 30 days"]
+    weaknesses_json = Column(
+        Text, nullable=True
+    )  # e.g., ["No LICENSE", "High open issue ratio"]
+    suggestions_json = Column(
+        Text, nullable=True
+    )  # e.g., ["Add a LICENSE file to define usage rules"]
 
     # Establish relationship
     analysis = relationship("Analysis", back_populates="metrics")

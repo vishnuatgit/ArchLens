@@ -7,12 +7,15 @@ from app.models.db_models import Repository, Analysis, Metric
 
 logger = logging.getLogger("ArchLens.repository_service")
 
+
 class RepositoryService:
     """
     Handles all database persistence operations for repositories, analyses, and metrics.
     """
 
-    def get_or_create_repository(self, db: Session, owner: str, name: str, url: str) -> Repository:
+    def get_or_create_repository(
+        self, db: Session, owner: str, name: str, url: str
+    ) -> Repository:
         """
         Returns an existing repository record or creates a new one if not found.
         """
@@ -35,7 +38,7 @@ class RepositoryService:
         languages: dict,
         contributor_count: int,
         recent_commits: list,
-        report: dict
+        report: dict,
     ) -> Analysis:
         """
         Persists a full analysis run including score breakdown, metrics, and recommendations.
@@ -44,7 +47,9 @@ class RepositoryService:
         pushed_at_str = metadata.get("pushed_at")
         if pushed_at_str:
             try:
-                last_pushed = datetime.fromisoformat(pushed_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                last_pushed = datetime.fromisoformat(
+                    pushed_at_str.replace("Z", "+00:00")
+                ).replace(tzinfo=None)
             except Exception as e:
                 logger.warning(f"Failed to parse pushed_at timestamp: {str(e)}")
 
@@ -55,11 +60,7 @@ class RepositoryService:
             for lang, count in languages.items()
         }
 
-        analysis = Analysis(
-            repository_id=repository_id,
-            score=score,
-            duration=duration
-        )
+        analysis = Analysis(repository_id=repository_id, score=score, duration=duration)
         db.add(analysis)
         db.flush()  # Populate analysis.id without committing
 
@@ -76,12 +77,14 @@ class RepositoryService:
             score_breakdown_json=json.dumps(report.get("breakdown", {})),
             strengths_json=json.dumps(report.get("strengths", [])),
             weaknesses_json=json.dumps(report.get("weaknesses", [])),
-            suggestions_json=json.dumps(report.get("suggestions", []))
+            suggestions_json=json.dumps(report.get("suggestions", [])),
         )
         db.add(metric)
         db.commit()
         db.refresh(analysis)
-        logger.info(f"Saved analysis id={analysis.id} for repository_id={repository_id} with score={score}")
+        logger.info(
+            f"Saved analysis id={analysis.id} for repository_id={repository_id} with score={score}"
+        )
         return analysis
 
     def get_analysis_by_id(self, db: Session, analysis_id: int) -> Optional[Analysis]:
@@ -90,7 +93,9 @@ class RepositoryService:
         """
         return db.query(Analysis).filter(Analysis.id == analysis_id).first()
 
-    def get_history(self, db: Session, limit: int = 20, offset: int = 0) -> List[Analysis]:
+    def get_history(
+        self, db: Session, limit: int = 20, offset: int = 0
+    ) -> List[Analysis]:
         """
         Returns a paginated list of analyses ordered by most recently created.
         """

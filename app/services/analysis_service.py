@@ -2,11 +2,17 @@ import logging
 import time
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from app.services.github_service import GitHubService, parse_github_url, GitHubNotFoundError, GitHubRateLimitError
+from app.services.github_service import (
+    GitHubService,
+    parse_github_url,
+    GitHubNotFoundError,
+    GitHubRateLimitError,
+)
 from app.services.metrics_service import MetricsService
 from app.services.repository_service import RepositoryService
 
 logger = logging.getLogger("ArchLens.analysis_service")
+
 
 class AnalysisService:
     """
@@ -39,19 +45,29 @@ class AnalysisService:
 
         try:
             # Step 2: Fetch repository data concurrently from GitHub API
-            since_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            since_date = (datetime.utcnow() - timedelta(days=30)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
 
             metadata = await self.github.fetch_repo_metadata(owner, repo_name)
             languages = await self.github.fetch_languages(owner, repo_name)
             contributors = await self.github.fetch_contributors(owner, repo_name)
             root_contents = await self.github.fetch_contents(owner, repo_name, "")
-            recent_commits = await self.github.fetch_recent_commits(owner, repo_name, since_iso=since_date)
-            workflow_contents = await self.github.fetch_contents(owner, repo_name, ".github/workflows")
+            recent_commits = await self.github.fetch_recent_commits(
+                owner, repo_name, since_iso=since_date
+            )
+            workflow_contents = await self.github.fetch_contents(
+                owner, repo_name, ".github/workflows"
+            )
 
         except GitHubNotFoundError:
-            raise ValueError(f"Repository '{owner}/{repo_name}' was not found on GitHub.")
+            raise ValueError(
+                f"Repository '{owner}/{repo_name}' was not found on GitHub."
+            )
         except GitHubRateLimitError as e:
-            raise RuntimeError(f"GitHub API rate limit exceeded. Try again later.") from e
+            raise RuntimeError(
+                "GitHub API rate limit exceeded. Try again later."
+            ) from e
 
         contributor_count = len(contributors)
 
@@ -62,21 +78,20 @@ class AnalysisService:
             root_contents=root_contents,
             contributor_count=contributor_count,
             recent_commits=recent_commits,
-            workflow_contents=workflow_contents
+            workflow_contents=workflow_contents,
         )
 
         overall_score = report["overall_score"]
         duration = round(time.time() - start_time, 3)
 
-        logger.info(f"Analysis complete for {owner}/{repo_name} | Score: {overall_score} | Duration: {duration}s")
+        logger.info(
+            f"Analysis complete for {owner}/{repo_name} | Score: {overall_score} | Duration: {duration}s"
+        )
 
         # Step 4: Persist results to database inside a transaction
         try:
             db_repo = self.repository_service.get_or_create_repository(
-                db=db,
-                owner=owner,
-                name=repo_name,
-                url=url
+                db=db, owner=owner, name=repo_name, url=url
             )
             analysis = self.repository_service.save_analysis(
                 db=db,
@@ -87,11 +102,15 @@ class AnalysisService:
                 languages=languages,
                 contributor_count=contributor_count,
                 recent_commits=recent_commits,
-                report=report
+                report=report,
             )
         except Exception as e:
-            logger.error(f"Failed to persist analysis for {owner}/{repo_name}: {str(e)}")
-            raise RuntimeError("Failed to save analysis results to the database.") from e
+            logger.error(
+                f"Failed to persist analysis for {owner}/{repo_name}: {str(e)}"
+            )
+            raise RuntimeError(
+                "Failed to save analysis results to the database."
+            ) from e
 
         # Step 5: Return structured response
         return {
@@ -104,5 +123,5 @@ class AnalysisService:
             "breakdown": report["breakdown"],
             "strengths": report["strengths"],
             "weaknesses": report["weaknesses"],
-            "suggestions": report["suggestions"]
+            "suggestions": report["suggestions"],
         }

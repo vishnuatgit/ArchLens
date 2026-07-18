@@ -33,6 +33,7 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="s
 # Register web page routes
 app.include_router(web.router)
 
+
 @app.get("/health", tags=["System"])
 def health_check():
     """

@@ -2,12 +2,15 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
+
 class RepositoryBase(BaseModel):
     url: str
+
 
 class RepositoryCreate(RepositoryBase):
     owner: str
     name: str
+
 
 class RepositoryResponse(BaseModel):
     id: int
@@ -19,6 +22,7 @@ class RepositoryResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class MetricResponse(BaseModel):
     id: int
     analysis_id: int
@@ -29,7 +33,7 @@ class MetricResponse(BaseModel):
     contributor_count: int
     repo_size: int
     last_pushed: Optional[datetime] = None
-    
+
     # Complex fields parsed from database JSON strings
     languages: Dict[str, int] = Field(default_factory=dict)
     score_breakdown: Dict[str, int] = Field(default_factory=dict)
@@ -39,6 +43,7 @@ class MetricResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class AnalysisResponse(BaseModel):
     id: int
@@ -51,8 +56,12 @@ class AnalysisResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class AnalyzeRequest(BaseModel):
-    url: str = Field(..., description="GitHub repository URL (e.g. https://github.com/owner/repo)")
+    url: str = Field(
+        ..., description="GitHub repository URL (e.g. https://github.com/owner/repo)"
+    )
+
 
 class AnalyzeResponse(BaseModel):
     analysis_id: int
