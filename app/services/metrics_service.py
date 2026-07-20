@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Tuple
 
 logger = logging.getLogger("ArchLens.metrics_service")
@@ -135,7 +135,9 @@ class MetricsService:
                 pushed_dt = datetime.fromisoformat(
                     pushed_at_str.replace("Z", "+00:00")
                 ).replace(tzinfo=None)
-                days_since_push = (datetime.utcnow() - pushed_dt).days
+                days_since_push = (
+                    datetime.now(timezone.utc).replace(tzinfo=None) - pushed_dt
+                ).days
             except Exception as e:
                 logger.error(
                     f"Error parsing pushed_at timestamp '{pushed_at_str}': {str(e)}"

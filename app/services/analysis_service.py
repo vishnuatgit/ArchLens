@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from app.services.github_service import (
     GitHubService,
@@ -34,7 +34,7 @@ class AnalysisService:
         Executes a complete repository analysis and persists the result.
         Returns a dict with analysis_id, score, breakdown, strengths, weaknesses, suggestions.
         """
-        start_time = time.time()
+        start_time = time.perf_counter()
 
         # Step 1: Parse and validate the GitHub URL
         owner, repo_name = parse_github_url(url)
@@ -45,9 +45,9 @@ class AnalysisService:
 
         try:
             # Step 2: Fetch repository data concurrently from GitHub API
-            since_date = (datetime.utcnow() - timedelta(days=30)).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            )
+            since_date = (
+                datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+            ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             metadata = await self.github.fetch_repo_metadata(owner, repo_name)
             languages = await self.github.fetch_languages(owner, repo_name)
@@ -82,7 +82,7 @@ class AnalysisService:
         )
 
         overall_score = report["overall_score"]
-        duration = round(time.time() - start_time, 3)
+        duration = round(time.perf_counter() - start_time, 3)
 
         logger.info(
             f"Analysis complete for {owner}/{repo_name} | Score: {overall_score} | Duration: {duration}s"

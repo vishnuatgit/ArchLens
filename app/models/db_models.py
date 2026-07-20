@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.repositories.db import Base
+
+
+def utc_now_naive():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Repository(Base):
@@ -15,7 +19,7 @@ class Repository(Base):
     owner = Column(String, nullable=False)
     name = Column(String, nullable=False)
     url = Column(String, unique=True, index=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now_naive, nullable=False)
 
     # Establish one-to-many relationship with analysis records
     analyses = relationship(
@@ -36,7 +40,7 @@ class Analysis(Base):
     )
     score = Column(Integer, nullable=False)
     duration = Column(Float, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now_naive, nullable=False)
 
     # Establish relationships
     repository = relationship("Repository", back_populates="analyses")
