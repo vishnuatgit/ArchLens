@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ owner }}/{{ name }} &mdash; ArchLens{% endblock %}
+{% block title %}{{ owner }}/{{ name }} &mdash; ArchLens Engineering Analysis{% endblock %}
 {% block meta_description %}Engineering analysis for {{ owner }}/{{ name }}. Overall score: {{ score }}/100 across documentation, activity, organization, community, and maintainability.{% endblock %}
 
 {% block head_extra %}
@@ -12,22 +12,32 @@
 <!-- Page Header -->
 <div class="results-header">
     <div class="results-breadcrumb">
-        <a href="/" class="breadcrumb-link">Analyze</a>
+        <a href="/" class="breadcrumb-link">
+            <svg style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            </svg>
+            Analyze
+        </a>
         <span class="breadcrumb-sep">/</span>
         <span class="breadcrumb-current mono">{{ owner }}/{{ name }}</span>
     </div>
 
     <div class="results-meta-row">
         <div>
-            <h1 class="results-repo-title mono">{{ owner }}/{{ name }}</h1>
+            <div class="repo-title-wrap">
+                <h1 class="results-repo-title mono">{{ owner }}/{{ name }}</h1>
+                <span class="profile-badge profile-{{ repo_type }}">{{ repo_type }}</span>
+            </div>
             <p class="results-sub text-secondary text-sm">
-                Scanned on {{ created_at.strftime("%B %d, %Y at %H:%M UTC") }}
-                &middot; Completed in {{ "%.2f"|format(duration) }}s
-                &middot; Profile: <strong style="text-transform: capitalize;">{{ repo_type }}</strong>
+                Scanned {{ created_at.strftime("%B %d, %Y at %H:%M UTC") }}
+                &bull; Duration {{ "%.2f"|format(duration) }}s
             </p>
         </div>
         <a href="https://github.com/{{ owner }}/{{ name }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
-            View on GitHub
+            <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+            </svg>
+            <span>View on GitHub</span>
         </a>
     </div>
 </div>
@@ -37,16 +47,14 @@
 
     <!-- Overall Score Gauge -->
     <div class="card score-card">
-        <p class="card-title">Overall Score</p>
+        <p class="card-title">Overall Health Score</p>
 
         <div class="gauge-wrap" aria-label="Overall score: {{ score }} out of 100">
             <svg class="gauge-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                 <!-- Background track -->
-                <circle class="gauge-track" cx="60" cy="60" r="50"
-                    fill="none" stroke-width="10" />
-                <!-- Score arc filled dynamically via CSS variable -->
-                <circle class="gauge-fill" cx="60" cy="60" r="50"
-                    fill="none" stroke-width="10"
+                <circle class="gauge-track" cx="60" cy="60" r="50" fill="none" stroke-width="10" />
+                <!-- Score arc filled dynamically -->
+                <circle class="gauge-fill" cx="60" cy="60" r="50" fill="none" stroke-width="10"
                     style="--score: {{ score }};" />
             </svg>
             <div class="gauge-label">
@@ -62,27 +70,30 @@
             {% if score >= 70 %}tier-strong
             {% elif score >= 40 %}tier-moderate
             {% else %}tier-weak{% endif %}">
-            {% if score >= 70 %}Strong
-            {% elif score >= 40 %}Moderate
-            {% else %}Needs Work{% endif %}
+            {% if score >= 70 %}Strong Codebase
+            {% elif score >= 40 %}Moderate Health
+            {% else %}Needs Optimization{% endif %}
         </div>
     </div>
 
     <!-- Dimension Breakdown -->
     <div class="card breakdown-card">
-        <p class="card-title">Dimension Breakdown</p>
+        <p class="card-title">Engineering Dimension Breakdown</p>
         <ul class="breakdown-list">
             {% set dims = [
-                ("Documentation", breakdown.documentation, 20),
-                ("Activity",      breakdown.activity,      20),
-                ("Organization",  breakdown.organization,  20),
-                ("Community",     breakdown.community,     20),
-                ("Maintainability", breakdown.maintainability, 20)
+                ("Documentation", breakdown.documentation, 20, "doc"),
+                ("Activity",      breakdown.activity,      20, "act"),
+                ("Organization",  breakdown.organization,  20, "org"),
+                ("Community",     breakdown.community,     20, "com"),
+                ("Maintainability", breakdown.maintainability, 20, "mnt")
             ] %}
-            {% for label, val, max_val in dims %}
+            {% for label, val, max_val, key in dims %}
             <li class="breakdown-row">
                 <div class="breakdown-row-top">
-                    <span class="breakdown-label">{{ label }}</span>
+                    <span class="breakdown-label">
+                        <span class="dim-indicator dim-{{ key }}"></span>
+                        {{ label }}
+                    </span>
                     <span class="breakdown-val mono">{{ val }}<span class="text-muted">/{{ max_val }}</span></span>
                 </div>
                 <div class="progress-bar-wrap">
@@ -103,45 +114,95 @@
 <!-- Repository Metadata Strip -->
 <div class="metrics-strip">
     <div class="metric-tile">
+        <div class="metric-tile-header">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            <span class="metric-label">Stars</span>
+        </div>
         <span class="metric-value">{{ stars }}</span>
-        <span class="metric-label">Stars</span>
     </div>
+
     <div class="metric-tile">
+        <div class="metric-tile-header">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="18" r="3" />
+                <circle cx="6" cy="6" r="3" />
+                <circle cx="18" cy="6" r="3" />
+                <path d="M18 9v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9" />
+                <path d="M12 12v3" />
+            </svg>
+            <span class="metric-label">Forks</span>
+        </div>
         <span class="metric-value">{{ forks }}</span>
-        <span class="metric-label">Forks</span>
     </div>
+
     <div class="metric-tile">
+        <div class="metric-tile-header">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span class="metric-label">Open Issues</span>
+        </div>
         <span class="metric-value">{{ open_issues }}</span>
-        <span class="metric-label">Open Issues</span>
     </div>
+
     <div class="metric-tile">
+        <div class="metric-tile-header">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <span class="metric-label">Contributors</span>
+        </div>
         <span class="metric-value">{{ contributor_count }}</span>
-        <span class="metric-label">Contributors</span>
     </div>
+
     <div class="metric-tile">
+        <div class="metric-tile-header">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+            </svg>
+            <span class="metric-label">Disk Size</span>
+        </div>
         <span class="metric-value">{{ (repo_size / 1024)|round(1) }} MB</span>
-        <span class="metric-label">Size</span>
     </div>
+
     <div class="metric-tile">
+        <div class="metric-tile-header">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+            </svg>
+            <span class="metric-label">Languages</span>
+        </div>
         <span class="metric-value">{{ language_count }}</span>
-        <span class="metric-label">Languages</span>
     </div>
 </div>
 
 <!-- Language Distribution -->
 {% if languages %}
 <div class="card lang-card mt-6">
-    <p class="card-title">Language Distribution</p>
+    <div class="card-header">
+        <span class="card-title">Language Breakdown</span>
+        <span class="text-xs text-muted mono">{{ languages|length }} Languages Detected</span>
+    </div>
     <div class="lang-bar-wrap" role="img" aria-label="Language distribution">
         {% for lang, pct in languages.items() %}
-        <div class="lang-segment" style="width: {{ pct }}%;" title="{{ lang }}: {{ pct }}%"></div>
+        <div class="lang-segment lang-seg-{{ loop.index0 % 5 }}" style="width: {{ pct }}%;" title="{{ lang }}: {{ pct }}%"></div>
         {% endfor %}
     </div>
     <ul class="lang-legend">
         {% for lang, pct in languages.items() %}
         <li class="lang-legend-item">
-            <span class="lang-dot"></span>
-            <span class="text-sm">{{ lang }}</span>
+            <span class="lang-dot lang-seg-{{ loop.index0 % 5 }}"></span>
+            <span class="text-sm font-semibold">{{ lang }}</span>
             <span class="text-xs text-muted mono">{{ pct }}%</span>
         </li>
         {% endfor %}
@@ -149,14 +210,20 @@
 </div>
 {% endif %}
 
-<!-- Strengths / Weaknesses / Suggestions -->
+<!-- Strengths & Weaknesses Grid -->
 <div class="findings-grid mt-6">
 
     <!-- Strengths -->
     {% if strengths %}
     <div class="card findings-card">
         <div class="card-header">
-            <span class="card-title">Strengths</span>
+            <div class="findings-title-wrap">
+                <svg class="findings-icon text-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span class="card-title">Key Strengths</span>
+            </div>
             <span class="findings-count findings-count-green">{{ strengths|length }}</span>
         </div>
         <ul class="findings-list">
@@ -174,7 +241,14 @@
     {% if weaknesses %}
     <div class="card findings-card">
         <div class="card-header">
-            <span class="card-title">Weaknesses</span>
+            <div class="findings-title-wrap">
+                <svg class="findings-icon text-red" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span class="card-title">Areas of Concern</span>
+            </div>
             <span class="findings-count findings-count-red">{{ weaknesses|length }}</span>
         </div>
         <ul class="findings-list">
@@ -190,17 +264,24 @@
 
 </div>
 
-<!-- Suggestions -->
+<!-- Recommendations -->
 {% if suggestions %}
 <div class="card suggestions-card mt-6">
     <div class="card-header">
-        <span class="card-title">Recommendations</span>
+        <div class="findings-title-wrap">
+            <svg class="findings-icon text-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="9" y1="18" x2="15" y2="18" />
+                <line x1="10" y1="22" x2="14" y2="22" />
+                <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+            </svg>
+            <span class="card-title">Actionable Recommendations</span>
+        </div>
         <span class="findings-count findings-count-amber">{{ suggestions|length }}</span>
     </div>
     <ul class="suggestions-list">
         {% for item in suggestions %}
         <li class="suggestion-item">
-            <span class="suggestion-index mono text-muted">{{ loop.index }}</span>
+            <span class="suggestion-index mono">{{ loop.index }}</span>
             <span class="text-sm">{{ item }}</span>
         </li>
         {% endfor %}
@@ -210,8 +291,19 @@
 
 <!-- Footer Actions -->
 <div class="results-footer-actions mt-8">
-    <a href="/" class="btn btn-secondary">Run Another Analysis</a>
-    <a href="/history" class="btn btn-secondary">View History</a>
+    <a href="/" class="btn btn-primary">
+        <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <span>Run Another Scan</span>
+    </a>
+    <a href="/history" class="btn btn-secondary">
+        <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>View Full History</span>
+    </a>
 </div>
 
 {% endblock %}

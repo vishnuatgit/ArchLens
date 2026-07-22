@@ -1,27 +1,44 @@
 /* =========================================================
    History Page Styles
+   Table Grid, Row Hovers & Profile Pill Badges
    ========================================================= */
+
+.history-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-1);
+}
+
+.history-header-icon {
+    width: 28px;
+    height: 28px;
+    stroke: var(--accent-cyan);
+}
 
 /* --- Card override for table layout --- */
 .history-card {
     padding: 0;
     overflow: hidden;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
 }
 
 /* --- Table Header Row --- */
 .history-table-header {
     display: grid;
-    grid-template-columns: 1fr 80px 90px 120px 70px;
+    grid-template-columns: 1fr 90px 100px 140px 110px;
     align-items: center;
-    padding: var(--space-3) var(--space-6);
-    background: var(--bg-elevated);
+    padding: var(--space-4) var(--space-6);
+    background: var(--bg-surface-solid);
     border-bottom: 1px solid var(--border-subtle);
     gap: var(--space-4);
 }
 
 .th {
-    font-size: 0.7rem;
-    font-weight: 600;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-muted);
@@ -35,12 +52,12 @@
 
 .history-row {
     display: grid;
-    grid-template-columns: 1fr 80px 90px 120px 70px;
+    grid-template-columns: 1fr 90px 100px 140px 110px;
     align-items: center;
-    padding: var(--space-4) var(--space-6);
+    padding: var(--space-5) var(--space-6);
     gap: var(--space-4);
     border-bottom: 1px solid var(--border-subtle);
-    transition: background var(--transition);
+    transition: all var(--transition);
 }
 
 .history-row:last-child {
@@ -55,23 +72,43 @@
 .history-repo {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
 }
 
+.history-repo-top {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
 .history-repo-name {
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.95rem;
+    font-weight: 600;
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.profile-badge-sm {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-family: var(--font-heading);
+    font-size: 0.675rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
 .history-repo-url {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--text-muted);
 }
 
 .history-score {
@@ -96,8 +133,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-4);
-    margin-top: var(--space-6);
+    gap: var(--space-5);
+    margin-top: var(--space-8);
     padding-bottom: var(--space-4);
 }
 
@@ -106,31 +143,11 @@
     text-align: center;
 }
 
-/* --- Empty State (re-used from home) --- */
-.empty-state {
-    text-align: center;
-    padding: var(--space-16) 0;
-}
-
-.empty-icon {
-    font-size: 2rem;
-    color: var(--text-muted);
-    margin-bottom: var(--space-4);
-    opacity: 0.4;
-}
-
-.empty-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: var(--space-2);
-}
-
-/* --- Responsive: hide secondary columns on small screens --- */
-@media (max-width: 700px) {
+/* --- Responsive --- */
+@media (max-width: 768px) {
     .history-table-header,
     .history-row {
-        grid-template-columns: 1fr 80px 70px;
+        grid-template-columns: 1fr 80px 100px;
     }
 
     .th-hide,

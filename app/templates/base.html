@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="{% block meta_description %}ArchLens - Repository Intelligence Platform for Engineering Analysis{% endblock %}" />
-    <title>{% block title %}ArchLens{% endblock %}</title>
+    <title>{% block title %}ArchLens &mdash; Repository Intelligence{% endblock %}</title>
 
-    <!-- Google Fonts: Inter -->
+    <!-- Google Fonts: Plus Jakarta Sans, Inter, JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
 
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="/static/css/styles.css" />
@@ -18,17 +18,56 @@
 </head>
 <body>
 
-    <!-- Navigation -->
+    <!-- Ambient Background Lighting -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <!-- Navigation Bar -->
     <nav class="navbar">
         <div class="nav-inner container">
             <a href="/" class="nav-brand">
-                <span class="brand-icon"></span>
-                ArchLens
+                <div class="brand-logo-wrap">
+                    <svg class="brand-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9" stroke="url(#brand-grad)" stroke-width="2.2" />
+                        <circle cx="12" cy="12" r="4" fill="url(#brand-grad)" />
+                        <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="url(#brand-grad)" stroke-linecap="round" />
+                        <defs>
+                            <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#818cf8" />
+                                <stop offset="50%" stop-color="#38bdf8" />
+                                <stop offset="100%" stop-color="#34d399" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <span class="brand-text">Arch<span class="brand-accent">Lens</span></span>
             </a>
             <ul class="nav-links">
-                <li><a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Analyze</a></li>
-                <li><a href="/history" class="nav-link {% if request.url.path == '/history' %}active{% endif %}">History</a></li>
-                <li><a href="/health" class="nav-link" target="_blank">Health</a></li>
+                <li>
+                    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        <span>Analyze</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/history" class="nav-link {% if request.url.path == '/history' %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>History</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/health" class="nav-link" target="_blank" rel="noopener">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                        </svg>
+                        <span>Health</span>
+                    </a>
+                </li>
             </ul>
         </div>
     </nav>
@@ -43,8 +82,11 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container footer-inner">
-            <span class="footer-text">ArchLens &mdash; Repository Intelligence Platform</span>
-            <span class="footer-text">Built with FastAPI and Python</span>
+            <div class="footer-brand">
+                <span class="footer-dot"></span>
+                <span class="footer-text">ArchLens &mdash; Repository Intelligence Platform</span>
+            </div>
+            <span class="footer-meta">FastAPI &bull; Python 3.11 &bull; Async GitHub API Engine</span>
         </div>
     </footer>
 

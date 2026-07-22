@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}ArchLens - Analyze a Repository{% endblock %}
-{% block meta_description %}ArchLens analyzes any public GitHub repository and gives it an engineering score across documentation, activity, community, organization, and maintainability.{% endblock %}
+{% block title %}ArchLens &mdash; AI-Powered Repository Intelligence{% endblock %}
+{% block meta_description %}ArchLens analyzes any public GitHub repository and delivers high-precision engineering scores across documentation, activity, organization, community, and maintainability.{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="/static/css/home.css" />
@@ -11,40 +11,63 @@
 
 <!-- Hero Section -->
 <section class="hero">
-    <div class="hero-label">Repository Intelligence</div>
-    <h1 class="hero-title">How strong is your codebase?</h1>
+    <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        <span class="hero-badge-text">Repository Intelligence Engine</span>
+    </div>
+    <h1 class="hero-title">How resilient is your <span class="gradient-text">codebase?</span></h1>
     <p class="hero-subtitle">
-        Paste any public GitHub repository URL and get an engineering score across
-        five dimensions in seconds.
+        Enter any public GitHub repository URL to evaluate engineering health across documentation, release velocity, architecture, and maintainability.
     </p>
 
     <!-- Analysis Form -->
-    <form id="analyze-form" class="analyze-form" method="POST" action="/analyze">
-        <div class="form-row">
-            <div class="form-group" style="flex: 2;">
+    <form id="analyze-form" class="analyze-card" method="POST" action="/analyze">
+        <div class="form-grid">
+            <!-- Repo URL Input -->
+            <div class="form-group flex-2">
                 <label class="form-label" for="repo-url">GitHub Repository URL</label>
-                <input
-                    id="repo-url"
-                    class="form-input form-input-lg"
-                    type="url"
-                    name="url"
-                    placeholder="https://github.com/owner/repository"
-                    required
-                    autocomplete="off"
-                    spellcheck="false"
-                />
+                <div class="form-input-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                    </svg>
+                    <input
+                        id="repo-url"
+                        class="form-input form-input-with-icon"
+                        type="url"
+                        name="url"
+                        placeholder="https://github.com/fastapi/fastapi"
+                        required
+                        autocomplete="off"
+                        spellcheck="false"
+                    />
+                </div>
             </div>
-            <div class="form-group" style="flex: 1;">
+
+            <!-- Profile Selector -->
+            <div class="form-group flex-1">
                 <label class="form-label" for="repo-type">Repository Profile</label>
-                <select id="repo-type" name="repo_type" class="form-input form-input-lg">
-                    <option value="library">Open Source Library</option>
-                    <option value="personal">Personal Project</option>
-                    <option value="enterprise">Enterprise App</option>
-                </select>
+                <div class="form-input-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                        <polyline points="2 17 12 22 22 17" />
+                        <polyline points="2 12 12 17 22 12" />
+                    </svg>
+                    <select id="repo-type" name="repo_type" class="form-input form-input-with-icon">
+                        <option value="library">Open Source Library</option>
+                        <option value="personal">Personal Project</option>
+                        <option value="enterprise">Enterprise App</option>
+                    </select>
+                </div>
             </div>
+
+            <!-- Submit Button -->
             <div class="form-btn-wrap">
                 <button id="analyze-btn" class="btn btn-primary btn-lg" type="submit">
-                    <span id="btn-label">Analyze</span>
+                    <span id="btn-label">Analyze Repo</span>
+                    <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                    </svg>
                     <span class="spinner" id="btn-spinner"></span>
                 </button>
             </div>
@@ -52,18 +75,33 @@
 
         {% if error %}
         <div class="alert alert-error mt-4" id="form-error" role="alert">
-            {{ error }}
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{{ error }}</span>
         </div>
         {% endif %}
     </form>
 
-    <!-- Dimension Tags -->
+    <!-- Dimension Pill Badges -->
     <div class="dimension-tags">
-        <span class="dim-tag">Documentation</span>
-        <span class="dim-tag">Activity</span>
-        <span class="dim-tag">Organization</span>
-        <span class="dim-tag">Community</span>
-        <span class="dim-tag">Maintainability</span>
+        <span class="dim-tag">
+            <span class="dim-dot dim-doc"></span> Documentation
+        </span>
+        <span class="dim-tag">
+            <span class="dim-dot dim-act"></span> Activity
+        </span>
+        <span class="dim-tag">
+            <span class="dim-dot dim-org"></span> Organization
+        </span>
+        <span class="dim-tag">
+            <span class="dim-dot dim-com"></span> Community
+        </span>
+        <span class="dim-tag">
+            <span class="dim-dot dim-mnt"></span> Maintainability
+        </span>
     </div>
 </section>
 
@@ -73,21 +111,38 @@
 {% if recent_analyses %}
 <section class="recent-section">
     <div class="section-header">
-        <h2 class="section-title">Recent Scans</h2>
-        <a href="/history" class="btn btn-secondary btn-sm">View All</a>
+        <div class="section-header-left">
+            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            <h2 class="section-title">Recent Scans</h2>
+        </div>
+        <a href="/history" class="btn btn-secondary btn-sm">
+            <span>View All Scans</span>
+            <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6" />
+            </svg>
+        </a>
     </div>
 
     <ul class="scan-list" id="recent-scan-list">
         {% for item in recent_analyses %}
         <li class="scan-item">
             <a href="/analysis/{{ item.id }}" class="scan-link">
-                <div class="scan-info">
-                    <span class="scan-repo mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
-                    <span class="scan-meta text-muted text-xs">
-                        {{ item.created_at.strftime("%b %d, %Y") }}
-                        &middot;
-                        {{ "%.2f"|format(item.duration) }}s
-                    </span>
+                <div class="scan-left">
+                    <div class="scan-repo-avatar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        </svg>
+                    </div>
+                    <div class="scan-info">
+                        <span class="scan-repo mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
+                        <span class="scan-meta text-muted text-xs">
+                            Scanned {{ item.created_at.strftime("%b %d, %Y") }} &bull; {{ "%.2f"|format(item.duration) }}s
+                            &bull; Profile: <span class="profile-tag">{{ item.repo_type }}</span>
+                        </span>
+                    </div>
                 </div>
                 <div class="scan-score-wrap">
                     {% if item.score >= 70 %}
@@ -105,9 +160,15 @@
 </section>
 {% else %}
 <section class="empty-state">
-    <div class="empty-icon">&#9673;</div>
+    <div class="empty-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+    </div>
     <p class="empty-title">No analyses yet</p>
-    <p class="text-secondary text-sm">Submit a GitHub URL above to run your first scan.</p>
+    <p class="text-secondary text-sm">Paste a public GitHub URL above to run your first automated report.</p>
 </section>
 {% endif %}
 
@@ -118,12 +179,15 @@
     const form = document.getElementById('analyze-form');
     const btn  = document.getElementById('analyze-btn');
     const label  = document.getElementById('btn-label');
+    const arrow = document.querySelector('.btn-arrow');
     const spinner = document.getElementById('btn-spinner');
 
     form.addEventListener('submit', function () {
-        label.textContent = 'Analyzing...';
+        label.textContent = 'Analyzing Repo...';
+        if (arrow) arrow.style.display = 'none';
         spinner.style.display = 'block';
         btn.disabled = true;
+        btn.style.opacity = '0.85';
     });
 </script>
 {% endblock %}

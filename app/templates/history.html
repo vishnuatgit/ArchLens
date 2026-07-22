@@ -10,25 +10,33 @@
 {% block content %}
 
 <div class="page-header" style="text-align: left;">
-    <h1>Analysis History</h1>
-    <p class="text-secondary">All repository scans, ordered by most recent.</p>
+    <div class="history-title-wrap">
+        <svg class="history-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h1>Analysis History</h1>
+    </div>
+    <p class="text-secondary">Comprehensive log of all completed repository scans, ordered by most recent.</p>
 </div>
 
 {% if analyses %}
 <div class="card history-card">
     <div class="history-table-header">
-        <span class="th">Repository</span>
+        <span class="th">Repository & Profile</span>
         <span class="th">Score</span>
         <span class="th th-hide">Duration</span>
-        <span class="th th-hide">Date</span>
-        <span class="th"></span>
+        <span class="th th-hide">Scan Timestamp</span>
+        <span class="th">Action</span>
     </div>
 
     <ul class="history-list" id="history-list">
         {% for item in analyses %}
         <li class="history-row">
             <div class="history-repo">
-                <span class="history-repo-name mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
+                <div class="history-repo-top">
+                    <span class="history-repo-name mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
+                    <span class="profile-badge-sm profile-{{ item.repo_type }}">{{ item.repo_type }}</span>
+                </div>
                 <span class="history-repo-url text-muted text-xs">{{ item.repository.url }}</span>
             </div>
 
@@ -52,7 +60,9 @@
             </div>
 
             <div class="history-action">
-                <a href="/analysis/{{ item.id }}" class="btn btn-secondary btn-sm">View</a>
+                <a href="/analysis/{{ item.id }}" class="btn btn-secondary btn-sm">
+                    <span>View Report</span>
+                </a>
             </div>
         </li>
         {% endfor %}
@@ -62,22 +72,38 @@
 {% if total > limit %}
 <div class="pagination">
     {% if offset > 0 %}
-    <a href="/history?offset={{ [offset - limit, 0]|max }}&limit={{ limit }}" class="btn btn-secondary btn-sm">Previous</a>
+    <a href="/history?offset={{ [offset - limit, 0]|max }}&limit={{ limit }}" class="btn btn-secondary btn-sm">
+        <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6" />
+        </svg>
+        <span>Previous</span>
+    </a>
     {% endif %}
-    <span class="pagination-info text-secondary text-sm">
+
+    <span class="pagination-info text-secondary text-sm font-semibold">
         Showing {{ offset + 1 }}&ndash;{{ [offset + limit, total]|min }} of {{ total }}
     </span>
+
     {% if offset + limit < total %}
-    <a href="/history?offset={{ offset + limit }}&limit={{ limit }}" class="btn btn-secondary btn-sm">Next</a>
+    <a href="/history?offset={{ offset + limit }}&limit={{ limit }}" class="btn btn-secondary btn-sm">
+        <span>Next</span>
+        <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6" />
+        </svg>
+    </a>
     {% endif %}
 </div>
 {% endif %}
 
 {% else %}
 <div class="empty-state">
-    <div class="empty-icon">&#9673;</div>
+    <div class="empty-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    </div>
     <p class="empty-title">No analyses yet</p>
-    <p class="text-secondary text-sm">Run your first scan from the <a href="/">Analyze</a> page.</p>
+    <p class="text-secondary text-sm">Run your first repository scan from the <a href="/">Analyze</a> page.</p>
 </div>
 {% endif %}
 
