@@ -19,8 +19,8 @@ ArchLens is a scalable FastAPI application that analyzes GitHub repositories and
 
 ```text
 ArchLens/
+├── main.py                 # FastAPI application entry point
 ├── app/
-│   ├── main.py                 # FastAPI application entry point
 │   ├── config.py               # Environment configuration
 │   ├── models/                 # SQLAlchemy DB models
 │   ├── repositories/           # DB session and migrations
@@ -70,7 +70,7 @@ export GITHUB_TOKEN=your_token_here
 
 ### 5. Start the Server
 ```bash
-uvicorn app.main:app --reload
+uvicorn main:app --reload
 ```
 Navigate to `http://127.0.0.1:8000` to access the ArchLens dashboard.
 
