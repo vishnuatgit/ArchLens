@@ -1,47 +1,71 @@
-# ArchLens
+# ArchLens &mdash; Repository Intelligence Platform
 
-ArchLens is a scalable FastAPI application that analyzes GitHub repositories and generates engineering health and quality scores based on documentation, community, activity, and organization metrics.
+<p align="center">
+  <b>A high-precision engineering health and codebase quality analysis platform powered by FastAPI, SQLAlchemy, and GitHub API engine.</b>
+</p>
 
-## Features
+---
 
-- **Automated Codebase Analysis**: Computes a health score (0-100) based on 5 core dimensions:
-  - Documentation (README, LICENSE, CONTRIBUTING)
-  - Activity (Recent commits, age of repository)
-  - Organization (Source layout, test suites, configs)
-  - Community (Stars, forks, active contributors)
-  - Maintainability (Open issues ratio, CI/CD presence, repository size)
-- **Live GitHub Integration**: Leverages the GitHub REST API to perform live repository scans.
-- **SQLite Database**: Persists scans and logs history using SQLAlchemy and Alembic.
-- **Beautiful Dashboard**: Glassmorphism UI using Jinja2 and raw CSS to visualize scores, breakdowns, and actionable suggestions.
-- **Dockerized**: Production-ready multi-stage Docker build.
+## 🌟 Key Features
 
-## Project Structure
+- **Multi-Dimensional Codebase Scoring**: Calculates an overall engineering health score (0–100) across 5 core dimensions:
+  - 📖 **Documentation**: README architecture overview, LICENSE permissions, CONTRIBUTING guidelines, and dedicated `docs/` directories.
+  - ⚡ **Activity & Velocity**: Commit frequency over 30 days and days since last release/push.
+  - 📁 **Organization**: Dedicated source folders (`src/`, `app/`), test suites (`tests/`), and environment configuration manifests (`pyproject.toml`, `dockerfile`, `.env`).
+  - 👥 **Community Engagement**: GitHub stars, forks, and unique active contributor base.
+  - 🛡️ **Maintainability & CI/CD**: GitHub Actions workflows (`.github/workflows/`), open issue ratio, and overall disk size management.
+
+- 🎯 **Personalized Repository Profiles**:
+  - **Open Source Library**: Standard strict scoring across all 5 dimensions.
+  - **Personal Project**: Curved scoring that automatically forgives missing CI/CD workflows, low star/fork counts, and `CONTRIBUTING.md` guides.
+  - **Enterprise App**: Strictly evaluates test coverage and CI/CD automation while bypassing public community metrics.
+
+- 💎 **Modern Dark Glassmorphic Dashboard**:
+  - Built with raw CSS, Plus Jakarta Sans typography, ambient radial glow spheres, and backdrop blur glassmorphism.
+  - High-precision SVG circular score gauge with dynamic health tier badges (*Strong Codebase*, *Moderate Health*, *Needs Optimization*).
+  - 6-tile frosted metadata strip (Stars, Forks, Open Issues, Contributors, Disk Size, Languages).
+  - Multi-segment language distribution bars and categorised findings (Key Strengths, Areas of Concern, Actionable Recommendations).
+
+- ⚡ **Live GitHub Integration**: Async HTTP client fetching live repository data, contents, workflows, languages, and commit history.
+- 🗄️ **SQLite + Alembic Migration Engine**: Persistent storage for all historical analyses with versioned database migrations.
+- 🧪 **Full Test Coverage**: Comprehensive unit and integration test suite using Pytest and Starlette TestClient.
+- 🐳 **Containerized & Production-Ready**: Multi-stage Docker build producing a minimal container footprint.
+
+---
+
+## 📁 Project Structure
 
 ```text
 ArchLens/
 ├── main.py                 # FastAPI application entry point
 ├── app/
-│   ├── config.py               # Environment configuration
-│   ├── models/                 # SQLAlchemy DB models
-│   ├── repositories/           # DB session and migrations
-│   ├── routers/                # FastAPI web routes
+│   ├── config.py               # Environment configuration settings
+│   ├── models/                 # SQLAlchemy database models (Repository, Analysis, Metric)
+│   ├── repositories/           # DB session management & DAO queries
+│   ├── routers/                # FastAPI web routes (/, /analyze, /analysis/{id}, /history, /health)
 │   ├── schemas/                # Pydantic validation schemas
-│   ├── services/               # GitHub API client and scoring engines
-│   ├── templates/              # Jinja2 HTML templates
-│   └── static/                 # CSS and JS assets
+│   ├── services/               # GitHub API client, scoring engine & analysis orchestrator
+│   ├── templates/              # Jinja2 HTML templates (base, home, results, history, 404)
+│   └── static/                 # Glassmorphic CSS design system & assets
+├── alembic/                    # Database migration scripts
 ├── scripts/
-│   └── seed.py                 # Script to seed live data
-├── tests/                      # Pytest unit and integration tests
-├── Dockerfile                  # Production container definition
-├── alembic.ini                 # Alembic configuration
-└── requirements.txt            # Python dependencies
+│   └── seed.py                 # Script to seed live repository analysis data
+├── tests/                      # Pytest unit & integration test suites
+│   ├── unit/                   # Unit tests for services and parsers
+│   └── integration/            # Integration tests for web routes and DB
+├── Dockerfile                  # Multi-stage production container build
+├── alembic.ini                 # Alembic migration configuration
+├── requirements.txt            # Python dependencies
+└── README.md                   # Project documentation
 ```
 
-## Quick Start (Local Setup)
+---
+
+## 🚀 Quick Start Guide
 
 ### Prerequisites
-- Python 3.11+
-- Git
+- **Python 3.11+**
+- **Git**
 
 ### 1. Clone the Repository
 ```bash
@@ -49,45 +73,97 @@ git clone https://github.com/vishnuatgit/ArchLens.git
 cd ArchLens
 ```
 
-### 2. Set Up Virtual Environment
+### 2. Create & Activate Virtual Environment
 ```bash
+# On Linux/macOS
+python3 -m venv .venv
+source .venv/bin/activate
+
+# On Windows (PowerShell)
 python -m venv .venv
-source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+.venv\Scripts\activate
+```
+
+### 3. Install Dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. Run Database Migrations
-Initialize the SQLite database schema:
+### 4. Run Database Migrations
+Initialize the SQLite database schema using Alembic:
 ```bash
 alembic upgrade head
 ```
 
-### 4. (Optional) Set GitHub Token
-To avoid unauthenticated rate limits, set your GitHub Personal Access Token:
+### 5. (Optional) Configure GitHub Personal Access Token
+Setting a GitHub Token increases your GitHub API rate limit from 60 to 5,000 requests per hour:
 ```bash
-export GITHUB_TOKEN=your_token_here
+# On Linux/macOS
+export GITHUB_TOKEN="your_personal_access_token"
+
+# On Windows (PowerShell)
+$env:GITHUB_TOKEN="your_personal_access_token"
 ```
 
-### 5. Start the Server
+### 6. Launch the FastAPI Development Server
 ```bash
 uvicorn main:app --reload
 ```
-Navigate to `http://127.0.0.1:8000` to access the ArchLens dashboard.
+Open your browser and navigate to **[http://127.0.0.1:8000](http://127.0.0.1:8000)**.
 
-## Running Tests
-ArchLens is fully tested with Pytest. To run the test suite:
+---
+
+## 📊 Seeding Live Data
+
+To pre-populate the database with live analysis runs from popular public repositories (e.g. `octocat/Hello-World`, `fastapi/fastapi`, `pallets/flask`):
+
 ```bash
-pytest
+python scripts/seed.py
 ```
 
-## Docker Deployment
+---
 
-Build and run the ArchLens container locally:
+## 🛠️ API Reference
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/` | Home page with URL input form, profile selector, and recent scans |
+| `POST` | `/analyze` | Form submission endpoint to trigger full repository analysis |
+| `GET` | `/analysis/{id}` | Detailed engineering report dashboard for a specific scan ID |
+| `GET` | `/history` | Paginated analysis history page |
+| `GET` | `/health` | System health check endpoint returning API status |
+
+---
+
+## 🧪 Running Tests
+
+ArchLens maintains a robust test suite covering services, web routes, and database operations.
+
+Run all tests with Pytest:
+```bash
+# Set PYTHONPATH to the root directory
+export PYTHONPATH=.   # Windows PowerShell: $env:PYTHONPATH="."
+pytest -v
+```
+
+---
+
+## 🐳 Docker Deployment
+
+To build and run the multi-stage production Docker container:
 
 ```bash
+# 1. Build Docker Image
 docker build -t archlens:latest .
-docker run -p 8000:8000 archlens:latest
+
+# 2. Run Container
+docker run -d -p 8000:8000 --name archlens-app archlens:latest
 ```
 
-## License
-MIT License
+Access the containerized app at `http://localhost:8000`.
+
+---
+
+## 📜 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.

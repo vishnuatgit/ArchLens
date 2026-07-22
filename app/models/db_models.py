@@ -40,7 +40,9 @@ class Analysis(Base):
     )
     score = Column(Integer, nullable=False)
     duration = Column(Float, nullable=False)
-    repo_type = Column(String, default="library", server_default="library", nullable=False)
+    repo_type = Column(
+        String, default="library", server_default="library", nullable=False
+    )
     created_at = Column(DateTime, default=utc_now_naive, nullable=False)
 
     # Establish relationships

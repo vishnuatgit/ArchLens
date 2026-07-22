@@ -33,7 +33,10 @@ async def home(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/analyze", response_class=HTMLResponse)
 async def analyze(
-    request: Request, url: str = Form(...), repo_type: str = Form("library"), db: Session = Depends(get_db)
+    request: Request,
+    url: str = Form(...),
+    repo_type: str = Form("library"),
+    db: Session = Depends(get_db),
 ):
     """
     Receives a submitted repository URL, runs the full analysis pipeline,

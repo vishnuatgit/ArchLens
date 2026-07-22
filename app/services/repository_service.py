@@ -61,7 +61,12 @@ class RepositoryService:
             for lang, count in languages.items()
         }
 
-        analysis = Analysis(repository_id=repository_id, score=score, duration=duration, repo_type=repo_type)
+        analysis = Analysis(
+            repository_id=repository_id,
+            score=score,
+            duration=duration,
+            repo_type=repo_type,
+        )
         db.add(analysis)
         db.flush()  # Populate analysis.id without committing
 

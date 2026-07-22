@@ -57,7 +57,7 @@ class MetricsService:
             # Library/Enterprise: README is 10, License is 5, Contributing is 5
             if has_readme:
                 score += 10
-            
+
             if has_license:
                 score += 5
                 strengths.append("Found LICENSE file.")
@@ -75,7 +75,10 @@ class MetricsService:
         return score, strengths, weaknesses, suggestions
 
     def calculate_activity_score(
-        self, metadata: Dict[str, Any], recent_commits: List[Dict[str, Any]], repo_type: str
+        self,
+        metadata: Dict[str, Any],
+        recent_commits: List[Dict[str, Any]],
+        repo_type: str,
     ) -> Tuple[int, List[str], List[str], List[str]]:
         """
         Evaluates repository release frequency and developer activity (Max: 20 points).
@@ -88,16 +91,24 @@ class MetricsService:
         commit_count = len(recent_commits)
         if commit_count >= 10:
             score += 10
-            strengths.append(f"High commit activity: {commit_count} commits in the last 30 days.")
+            strengths.append(
+                f"High commit activity: {commit_count} commits in the last 30 days."
+            )
         elif commit_count >= 3:
             score += 5
-            strengths.append(f"Moderate commit activity: {commit_count} commits in the last 30 days.")
+            strengths.append(
+                f"Moderate commit activity: {commit_count} commits in the last 30 days."
+            )
         elif commit_count >= 1:
             score += 2
-            strengths.append(f"Low commit activity: {commit_count} commit(s) in the last 30 days.")
+            strengths.append(
+                f"Low commit activity: {commit_count} commit(s) in the last 30 days."
+            )
         else:
             weaknesses.append("Zero commit activity recorded in the last 30 days.")
-            suggestions.append("Commit updates periodically to keep the repository active.")
+            suggestions.append(
+                "Commit updates periodically to keep the repository active."
+            )
 
         pushed_at_str = metadata.get("pushed_at")
         days_since_push = 999
@@ -110,20 +121,30 @@ class MetricsService:
                     datetime.now(timezone.utc).replace(tzinfo=None) - pushed_dt
                 ).days
             except Exception as e:
-                logger.error(f"Error parsing pushed_at timestamp '{pushed_at_str}': {str(e)}")
+                logger.error(
+                    f"Error parsing pushed_at timestamp '{pushed_at_str}': {str(e)}"
+                )
 
         if days_since_push <= 30:
             score += 10
             strengths.append("Repository updated recently (within the last 30 days).")
         elif days_since_push <= 90:
             score += 5
-            strengths.append(f"Repository updated recently (last pushed {days_since_push} days ago).")
+            strengths.append(
+                f"Repository updated recently (last pushed {days_since_push} days ago)."
+            )
         elif days_since_push <= 180:
             score += 2
-            weaknesses.append(f"Repository is becoming inactive (last pushed {days_since_push} days ago).")
-            suggestions.append("Resume updates to prevent the repository from becoming stale.")
+            weaknesses.append(
+                f"Repository is becoming inactive (last pushed {days_since_push} days ago)."
+            )
+            suggestions.append(
+                "Resume updates to prevent the repository from becoming stale."
+            )
         else:
-            weaknesses.append(f"Repository is stale (last pushed {days_since_push} days ago).")
+            weaknesses.append(
+                f"Repository is stale (last pushed {days_since_push} days ago)."
+            )
             suggestions.append("Resume repository updates.")
 
         return score, strengths, weaknesses, suggestions
@@ -144,7 +165,14 @@ class MetricsService:
         has_configs = False
 
         config_extensions = [".toml", ".ini", ".json", ".yaml", ".yml", ".txt", ".lock"]
-        config_basenames = ["setup.py", "makefile", "dockerfile", "gemfile", "go.mod", "cargo.toml"]
+        config_basenames = [
+            "setup.py",
+            "makefile",
+            "dockerfile",
+            "gemfile",
+            "go.mod",
+            "cargo.toml",
+        ]
 
         for item in root_contents:
             name = item.get("name", "").lower()
@@ -156,13 +184,19 @@ class MetricsService:
                 elif name in ["src", "app", "lib", "sources", "pkg"]:
                     has_src = True
             elif item_type == "file":
-                if name.startswith(".") or name in config_basenames or any(name.endswith(ext) for ext in config_extensions):
+                if (
+                    name.startswith(".")
+                    or name in config_basenames
+                    or any(name.endswith(ext) for ext in config_extensions)
+                ):
                     has_configs = True
 
         if repo_type == "personal":
             # Forgives missing tests
-            if has_src: score += 10
-            if has_configs: score += 10
+            if has_src:
+                score += 10
+            if has_configs:
+                score += 10
         else:
             # Library/Enterprise: requires tests
             if has_tests:
@@ -200,7 +234,9 @@ class MetricsService:
         if repo_type in ["personal", "enterprise"]:
             # Give full community points for personal/enterprise since they aren't meant to be public hits
             score = 20
-            strengths.append("Community metrics bypassed for Personal/Enterprise profile.")
+            strengths.append(
+                "Community metrics bypassed for Personal/Enterprise profile."
+            )
             return score, strengths, weaknesses, suggestions
 
         stars = metadata.get("stargazers_count", 0) or 0
@@ -227,10 +263,14 @@ class MetricsService:
 
         if contributor_count >= 5:
             score += 8
-            strengths.append(f"Active contributor base with {contributor_count} contributors.")
+            strengths.append(
+                f"Active contributor base with {contributor_count} contributors."
+            )
         elif contributor_count >= 2:
             score += 4
-            strengths.append(f"Small active contributor group ({contributor_count} contributors).")
+            strengths.append(
+                f"Small active contributor group ({contributor_count} contributors)."
+            )
         else:
             weaknesses.append("Only a single contributor.")
             suggestions.append("Open issues for good first contributions.")
@@ -238,7 +278,10 @@ class MetricsService:
         return score, strengths, weaknesses, suggestions
 
     def calculate_maintainability_score(
-        self, metadata: Dict[str, Any], workflow_contents: List[Dict[str, Any]], repo_type: str
+        self,
+        metadata: Dict[str, Any],
+        workflow_contents: List[Dict[str, Any]],
+        repo_type: str,
     ) -> Tuple[int, List[str], List[str], List[str]]:
         """
         Evaluates CI/CD setup, open issue management, and repository size health (Max: 20 points).
@@ -251,10 +294,12 @@ class MetricsService:
         has_workflows = len(workflow_contents) > 0
         if has_workflows:
             score += 8
-            strengths.append(f"Found {len(workflow_contents)} GitHub Actions workflow(s).")
+            strengths.append(
+                f"Found {len(workflow_contents)} GitHub Actions workflow(s)."
+            )
         else:
             if repo_type == "personal":
-                score += 8 # Forgive missing CI/CD
+                score += 8  # Forgive missing CI/CD
             else:
                 weaknesses.append("No GitHub Actions workflows detected.")
                 suggestions.append("Add a GitHub Actions workflow.")
@@ -295,11 +340,21 @@ class MetricsService:
         """
         Orchestrates the full scoring report.
         """
-        doc_score, doc_str, doc_weak, doc_sug = self.calculate_documentation_score(root_contents, repo_type)
-        act_score, act_str, act_weak, act_sug = self.calculate_activity_score(metadata, recent_commits, repo_type)
-        org_score, org_str, org_weak, org_sug = self.calculate_organization_score(root_contents, repo_type)
-        com_score, com_str, com_weak, com_sug = self.calculate_community_score(metadata, contributor_count, repo_type)
-        mnt_score, mnt_str, mnt_weak, mnt_sug = self.calculate_maintainability_score(metadata, workflow_contents, repo_type)
+        doc_score, doc_str, doc_weak, doc_sug = self.calculate_documentation_score(
+            root_contents, repo_type
+        )
+        act_score, act_str, act_weak, act_sug = self.calculate_activity_score(
+            metadata, recent_commits, repo_type
+        )
+        org_score, org_str, org_weak, org_sug = self.calculate_organization_score(
+            root_contents, repo_type
+        )
+        com_score, com_str, com_weak, com_sug = self.calculate_community_score(
+            metadata, contributor_count, repo_type
+        )
+        mnt_score, mnt_str, mnt_weak, mnt_sug = self.calculate_maintainability_score(
+            metadata, workflow_contents, repo_type
+        )
 
         breakdown = {
             "documentation": doc_score,
@@ -309,7 +364,9 @@ class MetricsService:
             "maintainability": mnt_score,
         }
 
-        overall_score = min(100, doc_score + act_score + org_score + com_score + mnt_score)
+        overall_score = min(
+            100, doc_score + act_score + org_score + com_score + mnt_score
+        )
 
         return {
             "overall_score": overall_score,
