@@ -39,6 +39,7 @@ class RepositoryService:
         contributor_count: int,
         recent_commits: list,
         report: dict,
+        repo_type: str = "library",
     ) -> Analysis:
         """
         Persists a full analysis run including score breakdown, metrics, and recommendations.
@@ -60,7 +61,7 @@ class RepositoryService:
             for lang, count in languages.items()
         }
 
-        analysis = Analysis(repository_id=repository_id, score=score, duration=duration)
+        analysis = Analysis(repository_id=repository_id, score=score, duration=duration, repo_type=repo_type)
         db.add(analysis)
         db.flush()  # Populate analysis.id without committing
 

@@ -21,7 +21,7 @@
     <!-- Analysis Form -->
     <form id="analyze-form" class="analyze-form" method="POST" action="/analyze">
         <div class="form-row">
-            <div class="form-group" style="flex: 1;">
+            <div class="form-group" style="flex: 2;">
                 <label class="form-label" for="repo-url">GitHub Repository URL</label>
                 <input
                     id="repo-url"
@@ -33,6 +33,14 @@
                     autocomplete="off"
                     spellcheck="false"
                 />
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="repo-type">Repository Profile</label>
+                <select id="repo-type" name="repo_type" class="form-input form-input-lg">
+                    <option value="library">Open Source Library</option>
+                    <option value="personal">Personal Project</option>
+                    <option value="enterprise">Enterprise App</option>
+                </select>
             </div>
             <div class="form-btn-wrap">
                 <button id="analyze-btn" class="btn btn-primary btn-lg" type="submit">

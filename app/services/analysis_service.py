@@ -29,7 +29,7 @@ class AnalysisService:
         self.metrics = MetricsService()
         self.repository_service = RepositoryService()
 
-    async def run(self, db: Session, url: str) -> dict:
+    async def run(self, db: Session, url: str, repo_type: str = "library") -> dict:
         """
         Executes a complete repository analysis and persists the result.
         Returns a dict with analysis_id, score, breakdown, strengths, weaknesses, suggestions.
@@ -79,6 +79,7 @@ class AnalysisService:
             contributor_count=contributor_count,
             recent_commits=recent_commits,
             workflow_contents=workflow_contents,
+            repo_type=repo_type,
         )
 
         overall_score = report["overall_score"]
@@ -103,6 +104,7 @@ class AnalysisService:
                 contributor_count=contributor_count,
                 recent_commits=recent_commits,
                 report=report,
+                repo_type=repo_type,
             )
         except Exception as e:
             logger.error(
@@ -118,6 +120,7 @@ class AnalysisService:
             "status": "completed",
             "owner": owner,
             "name": repo_name,
+            "repo_type": repo_type,
             "score": overall_score,
             "duration": duration,
             "breakdown": report["breakdown"],

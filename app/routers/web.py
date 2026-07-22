@@ -33,7 +33,7 @@ async def home(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/analyze", response_class=HTMLResponse)
 async def analyze(
-    request: Request, url: str = Form(...), db: Session = Depends(get_db)
+    request: Request, url: str = Form(...), repo_type: str = Form("library"), db: Session = Depends(get_db)
 ):
     """
     Receives a submitted repository URL, runs the full analysis pipeline,
@@ -55,7 +55,7 @@ async def analyze(
 
     try:
         service = AnalysisService()
-        result = await service.run(db=db, url=url)
+        result = await service.run(db=db, url=url, repo_type=repo_type)
         return RedirectResponse(
             url=f"/analysis/{result['analysis_id']}", status_code=303
         )
@@ -110,6 +110,7 @@ async def results(request: Request, analysis_id: int, db: Session = Depends(get_
         context={
             "owner": analysis.repository.owner,
             "name": analysis.repository.name,
+            "repo_type": analysis.repo_type,
             "score": analysis.score,
             "duration": analysis.duration,
             "created_at": analysis.created_at,

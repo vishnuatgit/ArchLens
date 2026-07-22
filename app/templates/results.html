@@ -23,6 +23,7 @@
             <p class="results-sub text-secondary text-sm">
                 Scanned on {{ created_at.strftime("%B %d, %Y at %H:%M UTC") }}
                 &middot; Completed in {{ "%.2f"|format(duration) }}s
+                &middot; Profile: <strong style="text-transform: capitalize;">{{ repo_type }}</strong>
             </p>
         </div>
         <a href="https://github.com/{{ owner }}/{{ name }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
