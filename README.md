@@ -33,6 +33,89 @@
 
 ---
 
+## Architecture Diagram
+
+```mermaid
+graph TD
+    Client["Client Browser / HTTP"]
+    
+    subgraph Application Layer
+        MW["Middleware (Logging & Latency)"]
+        Router["Web Routers (app/routers/web.py)"]
+        DI["Dependency Injection (app/dependencies.py)"]
+    end
+    
+    subgraph Business Logic Layer
+        AS["AnalysisService (app/services/analysis_service.py)"]
+        MS["MetricsService (app/services/metrics_service.py)"]
+        GHS["GitHubService (app/services/github_service.py)"]
+        RS["RepositoryService (app/services/repository_service.py)"]
+    end
+
+    subgraph Data & External Services
+        GHAPI["GitHub REST API v3"]
+        DB[("SQLite Database")]
+        Alembic["Alembic Migration Engine"]
+    end
+
+    Client --> MW
+    MW --> Router
+    Router --> DI
+    DI --> AS
+    AS -->|Async Parallel Fetch| GHS
+    GHS -->|HTTP Requests| GHAPI
+    AS -->|Compute Health Score| MS
+    AS -->|Persist Results| RS
+    RS -->|SQLAlchemy ORM| DB
+    Alembic -->|Schema Versioning| DB
+```
+
+---
+
+## Data Schemas & Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    REPOSITORIES ||--o{ ANALYSES : "has many"
+    ANALYSES ||--|| METRICS : "has one"
+
+    REPOSITORIES {
+        int id PK
+        string owner
+        string name
+        string url UK
+        datetime created_at
+    }
+
+    ANALYSES {
+        int id PK
+        int repository_id FK
+        int score
+        float duration
+        string repo_type
+        datetime created_at
+    }
+
+    METRICS {
+        int id PK
+        int analysis_id FK
+        int stars
+        int forks
+        int open_issues
+        int language_count
+        int contributor_count
+        int repo_size
+        datetime last_pushed
+        string languages_json
+        string score_breakdown_json
+        string strengths_json
+        string weaknesses_json
+        string suggestions_json
+    }
+```
+
+---
+
 ## Project Structure
 
 ```text
