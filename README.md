@@ -247,9 +247,3 @@ docker run -d -p 8000:8000 --name archlens-app archlens:latest
 ```
 
 Access the containerized app at `http://localhost:8000`.
-
----
-
-## License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
