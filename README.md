@@ -1,4 +1,4 @@
-# ArchLens &mdash; Repository Intelligence Platform
+# ArchLens — Repository Intelligence Platform
 
 <p align="center">
   <b>A high-precision engineering health and codebase quality analysis platform powered by FastAPI, SQLAlchemy, and GitHub API engine.</b>
@@ -6,40 +6,43 @@
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 - **Multi-Dimensional Codebase Scoring**: Calculates an overall engineering health score (0–100) across 5 core dimensions:
-  - 📖 **Documentation**: README architecture overview, LICENSE permissions, CONTRIBUTING guidelines, and dedicated `docs/` directories.
-  - ⚡ **Activity & Velocity**: Commit frequency over 30 days and days since last release/push.
-  - 📁 **Organization**: Dedicated source folders (`src/`, `app/`), test suites (`tests/`), and environment configuration manifests (`pyproject.toml`, `dockerfile`, `.env`).
-  - 👥 **Community Engagement**: GitHub stars, forks, and unique active contributor base.
-  - 🛡️ **Maintainability & CI/CD**: GitHub Actions workflows (`.github/workflows/`), open issue ratio, and overall disk size management.
+  - **Documentation**: README architecture overview, LICENSE permissions, CONTRIBUTING guidelines, and dedicated `docs/` directories.
+  - **Activity & Velocity**: Commit frequency over 30 days and days since last release/push.
+  - **Organization**: Dedicated source folders (`src/`, `app/`), test suites (`tests/`), and environment configuration manifests (`pyproject.toml`, `dockerfile`, `.env`).
+  - **Community Engagement**: GitHub stars, forks, and unique active contributor base.
+  - **Maintainability & CI/CD**: GitHub Actions workflows (`.github/workflows/`), open issue ratio, and overall disk size management.
 
-- 🎯 **Personalized Repository Profiles**:
+- **Personalized Repository Profiles**:
   - **Open Source Library**: Standard strict scoring across all 5 dimensions.
   - **Personal Project**: Curved scoring that automatically forgives missing CI/CD workflows, low star/fork counts, and `CONTRIBUTING.md` guides.
   - **Enterprise App**: Strictly evaluates test coverage and CI/CD automation while bypassing public community metrics.
 
-- 💎 **Modern Dark Glassmorphic Dashboard**:
+- **Modern Dark Glassmorphic Dashboard**:
   - Built with raw CSS, Plus Jakarta Sans typography, ambient radial glow spheres, and backdrop blur glassmorphism.
   - High-precision SVG circular score gauge with dynamic health tier badges (*Strong Codebase*, *Moderate Health*, *Needs Optimization*).
   - 6-tile frosted metadata strip (Stars, Forks, Open Issues, Contributors, Disk Size, Languages).
   - Multi-segment language distribution bars and categorised findings (Key Strengths, Areas of Concern, Actionable Recommendations).
 
-- ⚡ **Live GitHub Integration**: Async HTTP client fetching live repository data, contents, workflows, languages, and commit history.
-- 🗄️ **SQLite + Alembic Migration Engine**: Persistent storage for all historical analyses with versioned database migrations.
-- 🧪 **Full Test Coverage**: Comprehensive unit and integration test suite using Pytest and Starlette TestClient.
-- 🐳 **Containerized & Production-Ready**: Multi-stage Docker build producing a minimal container footprint.
+- **Live Asynchronous GitHub Integration**: Async HTTP client (`httpx`) using `asyncio.gather()` to concurrently fetch live repository data, contents, workflows, languages, and commit history.
+- **SQLite + Alembic Migration Engine**: Persistent storage for all historical analyses with versioned database migrations and dependency injection.
+- **Full Test Coverage**: Comprehensive unit and integration test suite using Pytest and Starlette TestClient.
+- **Containerized & Production-Ready**: Multi-stage Docker build producing a minimal container footprint.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 ArchLens/
 ├── main.py                 # FastAPI application entry point
+├── pyproject.toml          # PEP 621 project configuration & tool settings
 ├── app/
 │   ├── config.py               # Environment configuration settings
+│   ├── dependencies.py         # FastAPI dependency injection providers
+│   ├── exceptions.py           # Custom application exception hierarchy
 │   ├── models/                 # SQLAlchemy database models (Repository, Analysis, Metric)
 │   ├── repositories/           # DB session management & DAO queries
 │   ├── routers/                # FastAPI web routes (/, /analyze, /analysis/{id}, /history, /health)
@@ -61,7 +64,7 @@ ArchLens/
 
 ---
 
-## 🚀 Quick Start Guide
+## Quick Start Guide
 
 ### Prerequisites
 - **Python 3.11+**
@@ -113,7 +116,7 @@ Open your browser and navigate to **[http://127.0.0.1:8000](http://127.0.0.1:800
 
 ---
 
-## 📊 Seeding Live Data
+## Seeding Live Data
 
 To pre-populate the database with live analysis runs from popular public repositories (e.g. `octocat/Hello-World`, `fastapi/fastapi`, `pallets/flask`):
 
@@ -123,7 +126,7 @@ python scripts/seed.py
 
 ---
 
-## 🛠️ API Reference
+## API Reference
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -135,7 +138,7 @@ python scripts/seed.py
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 ArchLens maintains a robust test suite covering services, web routes, and database operations.
 
@@ -148,7 +151,7 @@ pytest -v
 
 ---
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
 To build and run the multi-stage production Docker container:
 
@@ -164,6 +167,6 @@ Access the containerized app at `http://localhost:8000`.
 
 ---
 
-## 📜 License
+## License
 
 Distributed under the **MIT License**. See `LICENSE` for more information.
