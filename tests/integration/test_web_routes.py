@@ -13,10 +13,14 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
-from app.repositories.db import Base, get_db
+from app.dependencies import get_analysis_service, get_repository_service
+from app.exceptions import InvalidRepositoryURLError, RateLimitExceededError
 from app.models import db_models  # noqa: F401
-from app.models.db_models import Repository, Analysis, Metric
-from tests.integration.conftest import test_engine, override_get_db
+from app.models.db_models import Analysis, Metric, Repository
+from app.repositories.db import Base, get_db
+from app.services.analysis_service import AnalysisService
+from app.services.repository_service import RepositoryService
+from tests.integration.conftest import override_get_db, test_engine
 
 from main import app
 
@@ -35,6 +39,8 @@ def reset_db():
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
     yield
+    # Clean up any dependency overrides added during individual tests
+    app.dependency_overrides.pop(get_analysis_service, None)
 
 
 @pytest.fixture()
@@ -134,13 +140,14 @@ class TestHomePage:
 
 class TestAnalyzeEndpoint:
     def test_analyze_redirects_on_success(self, client):
-        with patch("app.routers.web.AnalysisService") as MockService:
-            instance = MockService.return_value
-            instance.run = AsyncMock(return_value={"analysis_id": 1})
-            response = client.post(
-                "/analyze",
-                data={"url": "https://github.com/octocat/Hello-World"},
-            )
+        mock_service = AsyncMock(spec=AnalysisService)
+        mock_service.run = AsyncMock(return_value={"analysis_id": 1})
+        app.dependency_overrides[get_analysis_service] = lambda: mock_service
+
+        response = client.post(
+            "/analyze",
+            data={"url": "https://github.com/octocat/Hello-World"},
+        )
         assert response.status_code == 303
         assert response.headers["location"] == "/analysis/1"
 
@@ -150,22 +157,24 @@ class TestAnalyzeEndpoint:
         assert b"Please enter a GitHub repository URL" in response.content
 
     def test_analyze_invalid_url_returns_400(self, client):
-        with patch("app.routers.web.AnalysisService") as MockService:
-            instance = MockService.return_value
-            instance.run = AsyncMock(
-                side_effect=ValueError("Invalid or unsupported GitHub repository URL")
-            )
-            response = client.post("/analyze", data={"url": "not-a-github-url"})
+        mock_service = AsyncMock(spec=AnalysisService)
+        mock_service.run = AsyncMock(
+            side_effect=InvalidRepositoryURLError("not-a-github-url")
+        )
+        app.dependency_overrides[get_analysis_service] = lambda: mock_service
+
+        response = client.post("/analyze", data={"url": "not-a-github-url"})
         assert response.status_code == 400
         assert b"Invalid" in response.content
 
-    def test_analyze_runtime_error_returns_503(self, client):
-        with patch("app.routers.web.AnalysisService") as MockService:
-            instance = MockService.return_value
-            instance.run = AsyncMock(side_effect=RuntimeError("rate limit"))
-            response = client.post(
-                "/analyze", data={"url": "https://github.com/octocat/Hello-World"}
-            )
+    def test_analyze_rate_limit_returns_503(self, client):
+        mock_service = AsyncMock(spec=AnalysisService)
+        mock_service.run = AsyncMock(side_effect=RateLimitExceededError())
+        app.dependency_overrides[get_analysis_service] = lambda: mock_service
+
+        response = client.post(
+            "/analyze", data={"url": "https://github.com/octocat/Hello-World"}
+        )
         assert response.status_code == 503
         assert b"rate limit" in response.content.lower()
 
@@ -229,3 +238,4 @@ class TestHealthEndpoint:
         data = client.get("/health").json()
         assert data["status"] == "healthy"
         assert data["app"] == "ArchLens"
+

@@ -1,12 +1,21 @@
+import asyncio
 import logging
 import time
 from datetime import datetime, timedelta, timezone
+
 from sqlalchemy.orm import Session
+
+from app.exceptions import (
+    InvalidRepositoryURLError,
+    PersistenceError,
+    RateLimitExceededError,
+    RepositoryNotFoundError,
+)
 from app.services.github_service import (
     GitHubService,
-    parse_github_url,
     GitHubNotFoundError,
     GitHubRateLimitError,
+    parse_github_url,
 )
 from app.services.metrics_service import MetricsService
 from app.services.repository_service import RepositoryService
@@ -17,14 +26,14 @@ logger = logging.getLogger("ArchLens.analysis_service")
 class AnalysisService:
     """
     Orchestrates the full repository analysis workflow:
-      1. Validates and parses the GitHub URL
-      2. Fetches all required repository data from the GitHub API
-      3. Calculates the overall engineering score and recommendations
-      4. Persists the results to the database
-      5. Returns the structured analysis report
+      1. Validates and parses the GitHub URL.
+      2. Fetches all required repository data from the GitHub API **concurrently**.
+      3. Calculates the overall engineering score and recommendations.
+      4. Persists the results to the database.
+      5. Returns the structured analysis report.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.github = GitHubService()
         self.metrics = MetricsService()
         self.repository_service = RepositoryService()
@@ -32,42 +41,56 @@ class AnalysisService:
     async def run(self, db: Session, url: str, repo_type: str = "library") -> dict:
         """
         Executes a complete repository analysis and persists the result.
-        Returns a dict with analysis_id, score, breakdown, strengths, weaknesses, suggestions.
+
+        Args:
+            db: Active SQLAlchemy session.
+            url: Public GitHub repository URL.
+            repo_type: One of 'library', 'personal', or 'enterprise'.
+
+        Returns:
+            Dict with analysis_id, score, breakdown, strengths, weaknesses, suggestions.
+
+        Raises:
+            InvalidRepositoryURLError: If the URL cannot be parsed.
+            RepositoryNotFoundError: If the repo does not exist on GitHub.
+            RateLimitExceededError: If the GitHub API rate limit is hit.
+            PersistenceError: If database write fails.
         """
         start_time = time.perf_counter()
 
         # Step 1: Parse and validate the GitHub URL
         owner, repo_name = parse_github_url(url)
         if not owner or not repo_name:
-            raise ValueError(f"Invalid or unsupported GitHub repository URL: {url}")
+            raise InvalidRepositoryURLError(url)
 
         logger.info(f"Starting analysis for {owner}/{repo_name}")
 
         try:
-            # Step 2: Fetch repository data concurrently from GitHub API
+            # Step 2: Fetch repository data **concurrently** from GitHub API
             since_date = (
                 datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            metadata = await self.github.fetch_repo_metadata(owner, repo_name)
-            languages = await self.github.fetch_languages(owner, repo_name)
-            contributors = await self.github.fetch_contributors(owner, repo_name)
-            root_contents = await self.github.fetch_contents(owner, repo_name, "")
-            recent_commits = await self.github.fetch_recent_commits(
-                owner, repo_name, since_iso=since_date
-            )
-            workflow_contents = await self.github.fetch_contents(
-                owner, repo_name, ".github/workflows"
+            (
+                metadata,
+                languages,
+                contributors,
+                root_contents,
+                recent_commits,
+                workflow_contents,
+            ) = await asyncio.gather(
+                self.github.fetch_repo_metadata(owner, repo_name),
+                self.github.fetch_languages(owner, repo_name),
+                self.github.fetch_contributors(owner, repo_name),
+                self.github.fetch_contents(owner, repo_name, ""),
+                self.github.fetch_recent_commits(owner, repo_name, since_iso=since_date),
+                self.github.fetch_contents(owner, repo_name, ".github/workflows"),
             )
 
         except GitHubNotFoundError:
-            raise ValueError(
-                f"Repository '{owner}/{repo_name}' was not found on GitHub."
-            )
+            raise RepositoryNotFoundError(owner, repo_name)
         except GitHubRateLimitError as e:
-            raise RuntimeError(
-                "GitHub API rate limit exceeded. Try again later."
-            ) from e
+            raise RateLimitExceededError(reset_epoch=e.reset_time) from e
 
         contributor_count = len(contributors)
 
@@ -107,11 +130,9 @@ class AnalysisService:
                 repo_type=repo_type,
             )
         except Exception as e:
-            logger.error(
-                f"Failed to persist analysis for {owner}/{repo_name}: {str(e)}"
-            )
-            raise RuntimeError(
-                "Failed to save analysis results to the database."
+            logger.error(f"Failed to persist analysis for {owner}/{repo_name}: {e}")
+            raise PersistenceError(
+                f"Failed to save analysis results for {owner}/{repo_name}."
             ) from e
 
         # Step 5: Return structured response

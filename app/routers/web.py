@@ -1,10 +1,20 @@
 import json
 import logging
-from fastapi import APIRouter, Request, Form, Depends
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pathlib import Path
+
+from app.dependencies import get_analysis_service, get_repository_service
+from app.exceptions import (
+    ArchLensError,
+    InvalidRepositoryURLError,
+    RateLimitExceededError,
+    RepositoryNotFoundError,
+)
+from app.models.db_models import Analysis
 from app.repositories.db import get_db
 from app.services.analysis_service import AnalysisService
 from app.services.repository_service import RepositoryService
@@ -15,15 +25,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 router = APIRouter()
-_repo_svc = RepositoryService()
 
 
 @router.get("/", response_class=HTMLResponse)
-async def home(request: Request, db: Session = Depends(get_db)):
+async def home(
+    request: Request,
+    db: Session = Depends(get_db),
+    repo_svc: RepositoryService = Depends(get_repository_service),
+):
     """
     Renders the home page with a URL input form and the five most recent analyses.
     """
-    recent_analyses = _repo_svc.get_history(db, limit=5, offset=0)
+    recent_analyses = repo_svc.get_history(db, limit=5, offset=0)
     return templates.TemplateResponse(
         request=request,
         name="home.html",
@@ -37,6 +50,8 @@ async def analyze(
     url: str = Form(...),
     repo_type: str = Form("library"),
     db: Session = Depends(get_db),
+    analysis_svc: AnalysisService = Depends(get_analysis_service),
+    repo_svc: RepositoryService = Depends(get_repository_service),
 ):
     """
     Receives a submitted repository URL, runs the full analysis pipeline,
@@ -45,7 +60,7 @@ async def analyze(
     url = url.strip()
 
     if not url:
-        recent_analyses = _repo_svc.get_history(db, limit=5, offset=0)
+        recent_analyses = repo_svc.get_history(db, limit=5, offset=0)
         return templates.TemplateResponse(
             request=request,
             name="home.html",
@@ -57,42 +72,59 @@ async def analyze(
         )
 
     try:
-        service = AnalysisService()
-        result = await service.run(db=db, url=url, repo_type=repo_type)
+        result = await analysis_svc.run(db=db, url=url, repo_type=repo_type)
         return RedirectResponse(
             url=f"/analysis/{result['analysis_id']}", status_code=303
         )
 
-    except ValueError as e:
-        logger.warning(f"Invalid URL submitted: {url} | {str(e)}")
-        recent_analyses = _repo_svc.get_history(db, limit=5, offset=0)
+    except (InvalidRepositoryURLError, RepositoryNotFoundError) as e:
+        logger.warning(f"Invalid URL submitted: {url} | {e.message}")
+        recent_analyses = repo_svc.get_history(db, limit=5, offset=0)
         return templates.TemplateResponse(
             request=request,
             name="home.html",
-            context={"recent_analyses": recent_analyses, "error": str(e)},
+            context={"recent_analyses": recent_analyses, "error": e.message},
             status_code=400,
         )
 
-    except RuntimeError as e:
-        logger.error(f"Analysis failed for URL: {url} | {str(e)}")
-        recent_analyses = _repo_svc.get_history(db, limit=5, offset=0)
+    except RateLimitExceededError:
+        logger.error(f"Rate limit hit during analysis for URL: {url}")
+        recent_analyses = repo_svc.get_history(db, limit=5, offset=0)
         return templates.TemplateResponse(
             request=request,
             name="home.html",
             context={
                 "recent_analyses": recent_analyses,
-                "error": "Analysis failed. This may be a GitHub API rate limit issue. Please try again shortly.",
+                "error": "Analysis failed. GitHub API rate limit exceeded. Please try again shortly.",
             },
             status_code=503,
         )
 
+    except ArchLensError as e:
+        logger.error(f"Analysis failed for URL: {url} | {e.message}")
+        recent_analyses = repo_svc.get_history(db, limit=5, offset=0)
+        return templates.TemplateResponse(
+            request=request,
+            name="home.html",
+            context={
+                "recent_analyses": recent_analyses,
+                "error": "An unexpected error occurred during analysis. Please try again.",
+            },
+            status_code=500,
+        )
+
 
 @router.get("/analysis/{analysis_id}", response_class=HTMLResponse)
-async def results(request: Request, analysis_id: int, db: Session = Depends(get_db)):
+async def results(
+    request: Request,
+    analysis_id: int,
+    db: Session = Depends(get_db),
+    repo_svc: RepositoryService = Depends(get_repository_service),
+):
     """
     Renders the results dashboard for a previously completed analysis.
     """
-    analysis = _repo_svc.get_analysis_by_id(db, analysis_id)
+    analysis = repo_svc.get_analysis_by_id(db, analysis_id)
     if not analysis:
         return templates.TemplateResponse(
             request=request, name="404.html", context={}, status_code=404
@@ -117,7 +149,7 @@ async def results(request: Request, analysis_id: int, db: Session = Depends(get_
             "score": analysis.score,
             "duration": analysis.duration,
             "created_at": analysis.created_at,
-            "breakdown": type("Breakdown", (), breakdown)(),
+            "breakdown": breakdown,
             "strengths": strengths,
             "weaknesses": weaknesses,
             "suggestions": suggestions,
@@ -134,16 +166,18 @@ async def results(request: Request, analysis_id: int, db: Session = Depends(get_
 
 @router.get("/history", response_class=HTMLResponse)
 async def history(
-    request: Request, offset: int = 0, limit: int = 20, db: Session = Depends(get_db)
+    request: Request,
+    offset: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    repo_svc: RepositoryService = Depends(get_repository_service),
 ):
     """
     Renders the paginated analysis history page.
     """
-    analyses = _repo_svc.get_history(db, limit=limit, offset=offset)
+    analyses = repo_svc.get_history(db, limit=limit, offset=offset)
 
     # Count total for pagination display
-    from app.models.db_models import Analysis
-
     total = db.query(Analysis).count()
 
     return templates.TemplateResponse(
@@ -156,3 +190,4 @@ async def history(
             "limit": limit,
         },
     )
+

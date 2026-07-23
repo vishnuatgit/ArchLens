@@ -81,11 +81,11 @@
         <p class="card-title">Engineering Dimension Breakdown</p>
         <ul class="breakdown-list">
             {% set dims = [
-                ("Documentation", breakdown.documentation, 20, "doc"),
-                ("Activity",      breakdown.activity,      20, "act"),
-                ("Organization",  breakdown.organization,  20, "org"),
-                ("Community",     breakdown.community,     20, "com"),
-                ("Maintainability", breakdown.maintainability, 20, "mnt")
+                ("Documentation", breakdown["documentation"], 20, "doc"),
+                ("Activity",      breakdown["activity"],      20, "act"),
+                ("Organization",  breakdown["organization"],  20, "org"),
+                ("Community",     breakdown["community"],     20, "com"),
+                ("Maintainability", breakdown["maintainability"], 20, "mnt")
             ] %}
             {% for label, val, max_val, key in dims %}
             <li class="breakdown-row">
