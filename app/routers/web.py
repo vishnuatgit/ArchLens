@@ -147,6 +147,8 @@ async def results(
             "name": analysis.repository.name,
             "repo_type": analysis.repo_type,
             "score": analysis.score,
+            "health_grade": getattr(metrics, "health_grade", "C") or "C",
+            "executive_summary": getattr(metrics, "executive_summary", "") or "",
             "duration": analysis.duration,
             "created_at": analysis.created_at,
             "breakdown": breakdown,

@@ -73,6 +73,12 @@ class Metric(Base):
     repo_size = Column(Integer, nullable=False, default=0)  # size in KB
     last_pushed = Column(DateTime, nullable=True)
 
+    # New Metric Scores & Summaries (Day 2 Features)
+    security_score = Column(Integer, nullable=False, default=0, server_default="0")
+    code_quality_score = Column(Integer, nullable=False, default=0, server_default="0")
+    health_grade = Column(String(5), nullable=True, server_default="C")
+    executive_summary = Column(Text, nullable=True)
+
     # Serialized JSON structures for complex breakdowns and recommendations
     languages_json = Column(Text, nullable=True)  # e.g., {"Python": 80.5, "HTML": 19.5}
     score_breakdown_json = Column(

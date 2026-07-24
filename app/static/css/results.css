@@ -217,11 +217,42 @@
     color: var(--text-primary);
 }
 
-.dim-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+/* --- Executive Summary Card --- */
+.exec-summary-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(56, 189, 248, 0.04) 100%);
+    border-color: rgba(99, 102, 241, 0.25);
 }
+
+.exec-summary-text {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: var(--text-primary);
+}
+
+.text-accent { stroke: var(--accent); }
+
+/* --- Grade Badges --- */
+.grade-badge {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 800;
+    padding: 4px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+}
+
+.grade-aplus, .grade-a { background: var(--green-dim); color: var(--green); border-color: rgba(52, 211, 153, 0.4); box-shadow: 0 0 12px rgba(52, 211, 153, 0.25); }
+.grade-bplus, .grade-b { background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 0 12px rgba(56, 189, 248, 0.25); }
+.grade-c { background: var(--amber-dim); color: var(--amber); border-color: rgba(251, 191, 36, 0.4); }
+.grade-d, .grade-f { background: var(--red-dim); color: var(--red); border-color: rgba(244, 63, 94, 0.4); }
+
+.dim-doc { background: #818cf8; box-shadow: 0 0 6px #818cf8; }
+.dim-act { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
+.dim-org { background: #a855f7; box-shadow: 0 0 6px #a855f7; }
+.dim-com { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+.dim-mnt { background: #34d399; box-shadow: 0 0 6px #34d399; }
+.dim-sec { background: #f43f5e; box-shadow: 0 0 6px #f43f5e; }
+.dim-qlty { background: #e879f9; box-shadow: 0 0 6px #e879f9; }
 
 .breakdown-val {
     font-size: 0.9rem;
