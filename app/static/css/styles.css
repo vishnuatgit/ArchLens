@@ -173,6 +173,33 @@ html[data-theme="light"] .footer {
     border-top: 1px solid rgba(15, 23, 42, 0.08) !important;
 }
 
+html[data-theme="light"] .footer-text,
+html[data-theme="light"] .footer-meta {
+    color: #64748b !important;
+}
+
+html[data-theme="light"] .card-header {
+    border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-theme="light"] .btn-secondary {
+    background: rgba(15, 23, 42, 0.06) !important;
+    border-color: rgba(15, 23, 42, 0.15) !important;
+    color: #334155 !important;
+}
+
+html[data-theme="light"] .btn-secondary:hover {
+    background: rgba(15, 23, 42, 0.1) !important;
+}
+
+html[data-theme="light"] .brand-text {
+    color: #0f172a !important;
+}
+
+html[data-theme="light"] .theme-toggle-btn {
+    color: #475569 !important;
+}
+
 /* --- Reset --- */
 *, *::before, *::after {
     box-sizing: border-box;

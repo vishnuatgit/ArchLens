@@ -319,3 +319,36 @@
         width: 100%;
     }
 }
+
+/* --- Light Mode Overrides for Home --- */
+html[data-theme="light"] .hero-badge {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: #0369a1;
+}
+
+html[data-theme="light"] .scan-link {
+    color: #0f172a;
+}
+
+html[data-theme="light"] .scan-item {
+    border-bottom-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+html[data-theme="light"] .dim-tag {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.1);
+    color: #334155;
+}
+
+html[data-theme="light"] .score-badge.score-high {
+    color: #059669;
+}
+
+html[data-theme="light"] .score-badge.score-mid {
+    color: #d97706;
+}
+
+html[data-theme="light"] .score-badge.score-low {
+    color: #e11d48;
+}

@@ -473,3 +473,51 @@
     .metrics-strip { grid-template-columns: repeat(2, 1fr); }
     .results-repo-title { font-size: 1.5rem; }
 }
+
+/* --- Action Button Group --- */
+.meta-action-btns {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* --- Light Mode Overrides for Results --- */
+html[data-theme="light"] .gauge-track {
+    stroke: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .finding-item,
+html[data-theme="light"] .suggestion-item {
+    background: rgba(15, 23, 42, 0.03) !important;
+    border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html[data-theme="light"] .lang-bar-wrap {
+    background: rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme="light"] .metric-tile {
+    background: #ffffff !important;
+    border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html[data-theme="light"] .metric-tile:hover {
+    background: #f8fafc !important;
+}
+
+html[data-theme="light"] .exec-summary-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(56, 189, 248, 0.03) 100%) !important;
+}
+
+html[data-theme="light"] .profile-library {
+    color: #4f46e5;
+}
+
+html[data-theme="light"] .profile-personal {
+    color: #059669;
+}
+
+html[data-theme="light"] .profile-enterprise {
+    color: #b45309;
+}
