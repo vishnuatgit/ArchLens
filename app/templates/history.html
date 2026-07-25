@@ -20,6 +20,16 @@
 </div>
 
 {% if analyses %}
+<div class="history-filter-bar mb-4">
+    <div class="search-input-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input id="history-search" class="form-input search-input" type="text" placeholder="Filter by repository name..." onkeyup="filterHistory()" />
+    </div>
+</div>
+
 <div class="card history-card">
     <div class="history-table-header">
         <span class="th">Repository & Profile</span>
@@ -99,7 +109,7 @@
 <div class="empty-state">
     <div class="empty-icon-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 0 0118 0z" />
         </svg>
     </div>
     <p class="empty-title">No analyses yet</p>
@@ -107,4 +117,23 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterHistory() {
+        const input = document.getElementById('history-search');
+        const filter = input.value.toLowerCase();
+        const rows = document.querySelectorAll('.history-row');
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(filter)) {
+                row.style.display = 'grid';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+</script>
 {% endblock %}

@@ -33,12 +33,22 @@
                 &bull; Duration {{ "%.2f"|format(duration) }}s
             </p>
         </div>
-        <a href="https://github.com/{{ owner }}/{{ name }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
-            <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-            </svg>
-            <span>View on GitHub</span>
-        </a>
+        <div class="meta-action-btns">
+            <button id="share-btn" class="btn btn-secondary btn-sm" onclick="copyReportLink()">
+                <svg style="width: 15px; height: 15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                <span id="share-btn-text">Share Report</span>
+            </button>
+            <a href="https://github.com/{{ owner }}/{{ name }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+                <svg style="width: 15px; height: 15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                </svg>
+                <span>View on GitHub</span>
+            </a>
+        </div>
     </div>
 </div>
 
@@ -317,15 +327,22 @@
         <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <span>Run Another Scan</span>
-    </a>
-    <a href="/history" class="btn btn-secondary">
-        <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>View Full History</span>
-    </a>
 </div>
+</div>
+{% endblock %}
 
+{% block scripts %}
+<script>
+    function copyReportLink() {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            const txt = document.getElementById('share-btn-text');
+            const orig = txt.textContent;
+            txt.textContent = 'Link Copied!';
+            setTimeout(() => { txt.textContent = orig; }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy URL: ', err);
+        });
+    }
+</script>
 {% endblock %}
