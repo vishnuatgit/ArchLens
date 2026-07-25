@@ -116,6 +116,63 @@ html[data-theme="light"] {
     --shadow-lg:        0 12px 48px rgba(15, 23, 42, 0.15);
 }
 
+/* --- Direct Light Mode Structural Styling --- */
+html[data-theme="light"] body {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+}
+
+html[data-theme="light"] .navbar {
+    background: rgba(255, 255, 255, 0.88) !important;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1) !important;
+}
+
+html[data-theme="light"] .nav-link {
+    color: #475569 !important;
+}
+
+html[data-theme="light"] .nav-link:hover,
+html[data-theme="light"] .nav-link.active {
+    color: #4f46e5 !important;
+    background: rgba(99, 102, 241, 0.08) !important;
+}
+
+html[data-theme="light"] .card,
+html[data-theme="light"] .analyze-card,
+html[data-theme="light"] .history-card,
+html[data-theme="light"] .summary-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(15, 23, 42, 0.12) !important;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+    color: #0f172a !important;
+}
+
+html[data-theme="light"] .form-input {
+    background: #f1f5f9 !important;
+    border: 1px solid rgba(15, 23, 42, 0.18) !important;
+    color: #0f172a !important;
+}
+
+html[data-theme="light"] .scan-item,
+html[data-theme="light"] .history-row {
+    background: #ffffff !important;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-theme="light"] .scan-item:hover,
+html[data-theme="light"] .history-row:hover {
+    background: #f1f5f9 !important;
+}
+
+html[data-theme="light"] .bg-glow {
+    opacity: 0.18 !important;
+}
+
+html[data-theme="light"] .footer {
+    background: #ffffff !important;
+    border-top: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
 /* --- Reset --- */
 *, *::before, *::after {
     box-sizing: border-box;
