@@ -809,3 +809,37 @@ html[data-theme="light"] .profile-enterprise { color: #b45309; }
     outline: 2px solid var(--accent-cyan);
     outline-offset: 2px;
 }
+
+/* --- Empty State --- */
+.empty-state {
+    text-align: center;
+    padding: var(--space-16) 0;
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+.empty-icon-wrap {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto var(--space-4);
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-icon-wrap svg {
+    width: 26px;
+    height: 26px;
+    stroke: var(--text-muted);
+}
+
+.empty-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
