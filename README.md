@@ -211,6 +211,8 @@ python scripts/seed.py
 
 ## API Reference
 
+### Web Dashboard Routes
+
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/` | Home page with URL input form, profile selector, and recent scans |
@@ -218,6 +220,17 @@ python scripts/seed.py
 | `GET` | `/analysis/{id}` | Detailed engineering report dashboard for a specific scan ID |
 | `GET` | `/history` | Paginated analysis history page |
 | `GET` | `/health` | System health check endpoint returning API status |
+
+### REST API v1 JSON Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/analyze` | Triggers asynchronous analysis from JSON body (`{"url": "...", "repo_type": "library"}`) |
+| `GET` | `/api/v1/analyses/{id}` | Fetches full structured JSON analysis report, health grade, and breakdown |
+| `GET` | `/api/v1/analyses` | Paginated query list with filtering (`?offset=0&limit=20&min_score=80&repo_type=library`) |
+| `GET` | `/api/v1/health` | REST API operational status health check |
+
+> **Interactive API Documentation**: Access Swagger UI at `http://127.0.0.1:8000/docs` and ReDoc at `http://127.0.0.1:8000/redoc`.
 
 ---
 
