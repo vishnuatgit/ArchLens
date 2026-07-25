@@ -50,7 +50,37 @@
     --amber-dim:       rgba(251, 191, 36, 0.14);
     --red:             #f43f5e;
     --red-dim:         rgba(244, 63, 94, 0.14);
+}
 
+/* --- Light Theme Token Overrides --- */
+[data-theme="light"] {
+    --bg-base:          #f1f5f9;
+    --bg-surface:       rgba(255, 255, 255, 0.88);
+    --bg-surface-solid: #ffffff;
+    --bg-elevated:      rgba(248, 250, 252, 0.95);
+    --bg-elevated-solid:#f8fafc;
+    --bg-overlay:       rgba(241, 245, 249, 0.85);
+
+    --border-subtle:    rgba(15, 23, 42, 0.08);
+    --border-default:   rgba(15, 23, 42, 0.14);
+    --border-strong:    rgba(15, 23, 42, 0.28);
+    --border-accent:    rgba(99, 102, 241, 0.5);
+
+    --gradient-hero:     linear-gradient(135deg, #0f172a 0%, #334155 50%, #475569 100%);
+    --gradient-text:     linear-gradient(135deg, #4f46e5 0%, #0284c7 50%, #059669 100%);
+    --gradient-card:     linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+
+    --text-primary:     #0f172a;
+    --text-secondary:   #475569;
+    --text-muted:       #64748b;
+    --text-inverse:     #ffffff;
+
+    --green:            #059669;
+    --amber:            #d97706;
+    --red:              #e11d48;
+}
+
+:root {
     /* Spacing */
     --space-1: 4px;
     --space-2: 8px;
