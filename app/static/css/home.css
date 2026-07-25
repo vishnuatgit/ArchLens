@@ -83,8 +83,8 @@ html[data-theme="light"] .glass-card {
 }
 
 .main-glass-card {
-    width: 320px;
-    padding: var(--space-4);
+    width: 440px;
+    padding: var(--space-5);
     z-index: 2;
 }
 
@@ -124,19 +124,19 @@ html[data-theme="light"] .glass-card-header {
 }
 
 .glass-score-ring {
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
-    border: 4px solid var(--accent-cyan);
+    border: 5px solid var(--accent-cyan);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto var(--space-4);
+    margin: 0 auto var(--space-5);
     box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
 }
 
 .glass-score-num {
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 800;
     color: var(--text-primary);
 }
@@ -156,21 +156,21 @@ html[data-theme="light"] .glass-card-header {
 
 .mini-glass-card {
     position: absolute;
-    bottom: -10px;
-    right: 0px;
-    padding: var(--space-3) var(--space-4);
+    bottom: -20px;
+    right: -20px;
+    padding: var(--space-3) var(--space-5);
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-size: 0.85rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--accent-cyan);
     z-index: 3;
 }
 
 .mini-glass-card svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
 }
 
 /* Animations */
@@ -529,6 +529,22 @@ html[data-theme="light"] .glass-card-header {
     .hero-content-right {
         margin-top: var(--space-8);
         min-height: 300px;
+    }
+
+    .main-glass-card {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .mini-glass-card {
+        right: 0;
+        bottom: -10px;
+        font-size: 0.85rem;
+    }
+    
+    .mini-glass-card svg {
+        width: 16px;
+        height: 16px;
     }
 
     .security-container {
