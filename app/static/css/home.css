@@ -156,8 +156,8 @@ html[data-theme="light"] .glass-card-header {
 
 .mini-glass-card {
     position: absolute;
-    bottom: -20px;
-    right: -20px;
+    bottom: -10px;
+    right: 0px;
     padding: var(--space-3) var(--space-4);
     display: flex;
     align-items: center;
@@ -394,11 +394,6 @@ html[data-theme="light"] .glass-card-header {
     border-radius: 50%;
 }
 
-.dim-doc { background: #818cf8; box-shadow: 0 0 6px #818cf8; }
-.dim-act { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
-.dim-org { background: #a855f7; box-shadow: 0 0 6px #a855f7; }
-.dim-com { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
-.dim-mnt { background: #34d399; box-shadow: 0 0 6px #34d399; }
 
 /* --- Recent Section --- */
 .recent-section {

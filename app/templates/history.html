@@ -125,15 +125,32 @@
         const input = document.getElementById('history-search');
         const filter = input.value.toLowerCase();
         const rows = document.querySelectorAll('.history-row');
+        let visibleCount = 0;
 
         rows.forEach(row => {
             const text = row.textContent.toLowerCase();
             if (text.includes(filter)) {
                 row.style.display = 'grid';
+                visibleCount++;
             } else {
                 row.style.display = 'none';
             }
         });
+        
+        let emptyMsg = document.getElementById('filter-empty-msg');
+        if (visibleCount === 0) {
+            if (!emptyMsg) {
+                emptyMsg = document.createElement('div');
+                emptyMsg.id = 'filter-empty-msg';
+                emptyMsg.className = 'empty-state';
+                emptyMsg.style.padding = 'var(--space-8) 0';
+                emptyMsg.innerHTML = '<p class="text-secondary" style="margin: 0; font-size: 0.95rem;">No matching repositories found.</p>';
+                document.getElementById('history-list').appendChild(emptyMsg);
+            }
+            emptyMsg.style.display = 'block';
+        } else if (emptyMsg) {
+            emptyMsg.style.display = 'none';
+        }
     }
 </script>
 {% endblock %}
