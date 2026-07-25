@@ -1,9 +1,10 @@
 import json
 import logging
 from datetime import datetime
-from typing import List, Optional
+
 from sqlalchemy.orm import Session
-from app.models.db_models import Repository, Analysis, Metric
+
+from app.models.db_models import Analysis, Metric, Repository
 
 logger = logging.getLogger("ArchLens.repository_service")
 
@@ -13,9 +14,7 @@ class RepositoryService:
     Handles all database persistence operations for repositories, analyses, and metrics.
     """
 
-    def get_or_create_repository(
-        self, db: Session, owner: str, name: str, url: str
-    ) -> Repository:
+    def get_or_create_repository(self, db: Session, owner: str, name: str, url: str) -> Repository:
         """
         Returns an existing repository record or creates a new one if not found.
         """
@@ -48,17 +47,16 @@ class RepositoryService:
         pushed_at_str = metadata.get("pushed_at")
         if pushed_at_str:
             try:
-                last_pushed = datetime.fromisoformat(
-                    pushed_at_str.replace("Z", "+00:00")
-                ).replace(tzinfo=None)
+                last_pushed = datetime.fromisoformat(pushed_at_str.replace("Z", "+00:00")).replace(
+                    tzinfo=None
+                )
             except Exception as e:
                 logger.warning(f"Failed to parse pushed_at timestamp: {str(e)}")
 
         # Compute language percentages from raw byte counts
         total_bytes = sum(languages.values()) or 1
         language_percentages = {
-            lang: round((count / total_bytes) * 100, 1)
-            for lang, count in languages.items()
+            lang: round((count / total_bytes) * 100, 1) for lang, count in languages.items()
         }
 
         analysis = Analysis(
@@ -97,15 +95,13 @@ class RepositoryService:
         )
         return analysis
 
-    def get_analysis_by_id(self, db: Session, analysis_id: int) -> Optional[Analysis]:
+    def get_analysis_by_id(self, db: Session, analysis_id: int) -> Analysis | None:
         """
         Retrieves a single analysis record by primary key, including related metrics.
         """
         return db.query(Analysis).filter(Analysis.id == analysis_id).first()
 
-    def get_history(
-        self, db: Session, limit: int = 20, offset: int = 0
-    ) -> List[Analysis]:
+    def get_history(self, db: Session, limit: int = 20, offset: int = 0) -> list[Analysis]:
         """
         Returns a paginated list of analyses ordered by most recently created.
         """

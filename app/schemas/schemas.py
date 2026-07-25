@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -26,7 +26,7 @@ class MetricApiResponse(BaseModel):
     language_count: int = 0
     contributor_count: int = 0
     repo_size: int = 0  # size in KB
-    last_pushed: Optional[datetime] = None
+    last_pushed: datetime | None = None
 
     security_score: int = 0
     code_quality_score: int = 0
@@ -34,11 +34,11 @@ class MetricApiResponse(BaseModel):
     executive_summary: str = ""
 
     # Deserialized breakdown fields
-    languages: Dict[str, float] = Field(default_factory=dict)
-    score_breakdown: Dict[str, int] = Field(default_factory=dict)
-    strengths: List[str] = Field(default_factory=list)
-    weaknesses: List[str] = Field(default_factory=list)
-    suggestions: List[str] = Field(default_factory=list)
+    languages: dict[str, float] = Field(default_factory=dict)
+    score_breakdown: dict[str, int] = Field(default_factory=dict)
+    strengths: list[str] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)
+    suggestions: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -54,7 +54,7 @@ class AnalysisDetailResponse(BaseModel):
     repo_type: str
     created_at: datetime
     repository: RepositoryResponse
-    metrics: Optional[MetricApiResponse] = None
+    metrics: MetricApiResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -81,7 +81,7 @@ class PaginatedAnalysisResponse(BaseModel):
     total: int
     offset: int
     limit: int
-    items: List[AnalysisSummaryResponse]
+    items: list[AnalysisSummaryResponse]
 
 
 class AnalyzeApiRequest(BaseModel):
@@ -105,4 +105,3 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Human-readable error message")
     error_code: str = Field(..., description="Machine-readable error identifier")
     status_code: int = Field(..., description="HTTP status code")
-

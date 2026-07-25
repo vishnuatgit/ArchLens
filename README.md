@@ -38,13 +38,13 @@
 ```mermaid
 graph TD
     Client["Client Browser / HTTP"]
-    
+
     subgraph Application Layer
         MW["Middleware (Logging & Latency)"]
         Router["Web Routers (app/routers/web.py)"]
         DI["Dependency Injection (app/dependencies.py)"]
     end
-    
+
     subgraph Business Logic Layer
         AS["AnalysisService (app/services/analysis_service.py)"]
         MS["MetricsService (app/services/metrics_service.py)"]

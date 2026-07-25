@@ -1,8 +1,10 @@
-import re
-import logging
 import asyncio
-from typing import Tuple, Optional, Dict, Any, List
+import logging
+import re
+from typing import Any
+
 import httpx
+
 from app.config import settings
 
 logger = logging.getLogger("ArchLens.github_service")
@@ -23,12 +25,12 @@ class GitHubNotFoundError(GitHubAPIError):
 class GitHubRateLimitError(GitHubAPIError):
     """Exception raised when the GitHub API rate limits are hit (403)."""
 
-    def __init__(self, message: str, reset_time: Optional[int] = None):
+    def __init__(self, message: str, reset_time: int | None = None):
         super().__init__(message)
         self.reset_time = reset_time
 
 
-def parse_github_url(url: str) -> Tuple[Optional[str], Optional[str]]:
+def parse_github_url(url: str) -> tuple[str | None, str | None]:
     """
     Parses a GitHub repository URL to extract the owner and repository name.
     Supports formats:
@@ -67,7 +69,7 @@ class GitHubService:
     Handles rate limiting, automatic retries for transient errors, and parses responses.
     """
 
-    def __init__(self, token: Optional[str] = None):
+    def __init__(self, token: str | None = None):
         self.base_url = "https://api.github.com"
         self.headers = {
             "Accept": "application/vnd.github.v3+json",
@@ -85,7 +87,7 @@ class GitHubService:
             )
 
     async def _make_request(
-        self, method: str, path: str, params: Optional[Dict[str, Any]] = None
+        self, method: str, path: str, params: dict[str, Any] | None = None
     ) -> Any:
         """
         Executes an HTTP request to the GitHub API, handling rate limits and retries on transient errors.
@@ -95,7 +97,7 @@ class GitHubService:
         backoff_factor = 1.5
 
         for attempt in range(max_retries):
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
                 try:
                     response = await client.request(
                         method, url, headers=self.headers, params=params, timeout=10.0
@@ -124,10 +126,7 @@ class GitHubService:
 
                 except httpx.HTTPStatusError as e:
                     # Retry on transient server errors
-                    if (
-                        e.response.status_code in [500, 502, 503, 504]
-                        and attempt < max_retries - 1
-                    ):
+                    if e.response.status_code in [500, 502, 503, 504] and attempt < max_retries - 1:
                         sleep_time = backoff_factor**attempt
                         logger.warning(
                             f"Transient error {e.response.status_code}. Retrying in {sleep_time:.2f}s..."
@@ -147,18 +146,16 @@ class GitHubService:
                         )
                         await asyncio.sleep(sleep_time)
                         continue
-                    raise GitHubAPIError(
-                        f"Network error connecting to GitHub: {str(e)}"
-                    ) from e
+                    raise GitHubAPIError(f"Network error connecting to GitHub: {str(e)}") from e
 
-    async def fetch_repo_metadata(self, owner: str, repo: str) -> Dict[str, Any]:
+    async def fetch_repo_metadata(self, owner: str, repo: str) -> dict[str, Any]:
         """
         Fetches core repository metadata.
         Endpoint: GET /repos/{owner}/{repo}
         """
         return await self._make_request("GET", f"/repos/{owner}/{repo}")
 
-    async def fetch_languages(self, owner: str, repo: str) -> Dict[str, int]:
+    async def fetch_languages(self, owner: str, repo: str) -> dict[str, int]:
         """
         Fetches language breakdown for the repository in bytes.
         Endpoint: GET /repos/{owner}/{repo}/languages
@@ -167,7 +164,7 @@ class GitHubService:
 
     async def fetch_contributors(
         self, owner: str, repo: str, per_page: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Fetches the list of contributors for a repository.
         Endpoint: GET /repos/{owner}/{repo}/contributors
@@ -185,17 +182,13 @@ class GitHubService:
             # Empty repositories can return 404 for contributors endpoint
             return []
 
-    async def fetch_contents(
-        self, owner: str, repo: str, path: str = ""
-    ) -> List[Dict[str, Any]]:
+    async def fetch_contents(self, owner: str, repo: str, path: str = "") -> list[dict[str, Any]]:
         """
         Fetches the contents of a directory or file in the repository (default root).
         Endpoint: GET /repos/{owner}/{repo}/contents/{path}
         """
         try:
-            data = await self._make_request(
-                "GET", f"/repos/{owner}/{repo}/contents/{path}"
-            )
+            data = await self._make_request("GET", f"/repos/{owner}/{repo}/contents/{path}")
             if data is None:
                 return []
             return data if isinstance(data, list) else [data]
@@ -204,7 +197,7 @@ class GitHubService:
 
     async def fetch_recent_commits(
         self, owner: str, repo: str, since_iso: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Fetches the commits for a repository since a specific ISO 8601 date.
         Endpoint: GET /repos/{owner}/{repo}/commits

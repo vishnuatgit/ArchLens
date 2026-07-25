@@ -18,7 +18,15 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "python-multipart>=0.0.9",
     "alembic>=1.13.1",
+    "typer>=0.12.3",
+    "rich>=13.7.1",
 ]
+
+[project.scripts]
+archlens = "app.cli:app"
+
+[tool.setuptools]
+packages = ["app"]
 
 [project.optional-dependencies]
 dev = [
@@ -28,6 +36,7 @@ dev = [
     "pytest-mock>=3.14.0",
     "ruff>=0.4.9",
     "black>=24.4.2",
+    "pre-commit>=3.7.1",
 ]
 
 [tool.pytest.ini_options]
@@ -37,8 +46,10 @@ pythonpath = ["."]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
-ignore = ["E501"]
+ignore = ["E501", "B008", "B904"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

@@ -7,22 +7,20 @@ so tests run without making real GitHub API calls.
 
 import json
 from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
-from app.dependencies import get_analysis_service, get_repository_service
+from app.dependencies import get_analysis_service
 from app.exceptions import InvalidRepositoryURLError, RateLimitExceededError
 from app.models import db_models  # noqa: F401
 from app.models.db_models import Analysis, Metric, Repository
 from app.repositories.db import Base, get_db
 from app.services.analysis_service import AnalysisService
-from app.services.repository_service import RepositoryService
-from tests.integration.conftest import override_get_db, test_engine
-
 from main import app
+from tests.integration.conftest import override_get_db, test_engine
 
 app.dependency_overrides[get_db] = override_get_db
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -100,9 +98,7 @@ def seeded_analysis(db):
         ),
         strengths_json=json.dumps(["Has a README", "Active in the last 30 days"]),
         weaknesses_json=json.dumps(["No LICENSE file detected"]),
-        suggestions_json=json.dumps(
-            ["Add a LICENSE file to define legal usage terms."]
-        ),
+        suggestions_json=json.dumps(["Add a LICENSE file to define legal usage terms."]),
     )
     db.add(metric)
     db.commit()
@@ -158,9 +154,7 @@ class TestAnalyzeEndpoint:
 
     def test_analyze_invalid_url_returns_400(self, client):
         mock_service = AsyncMock(spec=AnalysisService)
-        mock_service.run = AsyncMock(
-            side_effect=InvalidRepositoryURLError("not-a-github-url")
-        )
+        mock_service.run = AsyncMock(side_effect=InvalidRepositoryURLError("not-a-github-url"))
         app.dependency_overrides[get_analysis_service] = lambda: mock_service
 
         response = client.post("/analyze", data={"url": "not-a-github-url"})
@@ -172,9 +166,7 @@ class TestAnalyzeEndpoint:
         mock_service.run = AsyncMock(side_effect=RateLimitExceededError())
         app.dependency_overrides[get_analysis_service] = lambda: mock_service
 
-        response = client.post(
-            "/analyze", data={"url": "https://github.com/octocat/Hello-World"}
-        )
+        response = client.post("/analyze", data={"url": "https://github.com/octocat/Hello-World"})
         assert response.status_code == 503
         assert b"rate limit" in response.content.lower()
 
@@ -238,4 +230,3 @@ class TestHealthEndpoint:
         data = client.get("/health").json()
         assert data["status"] == "healthy"
         assert data["app"] == "ArchLens"
-

@@ -21,9 +21,8 @@ from app.exceptions import InvalidRepositoryURLError, RateLimitExceededError
 from app.models.db_models import Analysis, Metric, Repository
 from app.repositories.db import Base, get_db
 from app.services.analysis_service import AnalysisService
-from tests.integration.conftest import override_get_db, test_engine
-
 from main import app
+from tests.integration.conftest import override_get_db, test_engine
 
 app.dependency_overrides[get_db] = override_get_db
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
@@ -125,9 +124,7 @@ class TestApiAnalyze:
 
     def test_post_analyze_invalid_url_returns_400(self, client):
         mock_service = AsyncMock(spec=AnalysisService)
-        mock_service.run = AsyncMock(
-            side_effect=InvalidRepositoryURLError("invalid-url")
-        )
+        mock_service.run = AsyncMock(side_effect=InvalidRepositoryURLError("invalid-url"))
         app.dependency_overrides[get_analysis_service] = lambda: mock_service
 
         response = client.post("/api/v1/analyze", json={"url": "invalid-url"})

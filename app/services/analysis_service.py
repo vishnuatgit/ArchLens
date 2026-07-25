@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -12,9 +12,9 @@ from app.exceptions import (
     RepositoryNotFoundError,
 )
 from app.services.github_service import (
-    GitHubService,
     GitHubNotFoundError,
     GitHubRateLimitError,
+    GitHubService,
     parse_github_url,
 )
 from app.services.metrics_service import MetricsService
@@ -67,9 +67,9 @@ class AnalysisService:
 
         try:
             # Step 2: Fetch repository data **concurrently** from GitHub API
-            since_date = (
-                datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
-            ).strftime("%Y-%m-%dT%H:%M:%SZ")
+            since_date = (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=30)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
 
             (
                 metadata,

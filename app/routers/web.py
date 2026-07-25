@@ -73,9 +73,7 @@ async def analyze(
 
     try:
         result = await analysis_svc.run(db=db, url=url, repo_type=repo_type)
-        return RedirectResponse(
-            url=f"/analysis/{result['analysis_id']}", status_code=303
-        )
+        return RedirectResponse(url=f"/analysis/{result['analysis_id']}", status_code=303)
 
     except (InvalidRepositoryURLError, RepositoryNotFoundError) as e:
         logger.warning(f"Invalid URL submitted: {url} | {e.message}")
@@ -192,4 +190,3 @@ async def history(
             "limit": limit,
         },
     )
-

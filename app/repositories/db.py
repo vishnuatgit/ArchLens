@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
 from app.config import settings
 
 # Configure connection arguments, enabling multi-threaded SQLite access

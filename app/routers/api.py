@@ -7,7 +7,6 @@ and external integrations.
 
 import json
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
@@ -18,11 +17,11 @@ from app.models.db_models import Analysis
 from app.repositories.db import get_db
 from app.schemas.schemas import (
     AnalysisDetailResponse,
+    AnalysisSummaryResponse,
     AnalyzeApiRequest,
     MetricApiResponse,
     PaginatedAnalysisResponse,
     RepositoryResponse,
-    AnalysisSummaryResponse,
 )
 from app.services.analysis_service import AnalysisService
 from app.services.repository_service import RepositoryService
@@ -62,7 +61,9 @@ def build_analysis_detail_response(analysis: Analysis) -> AnalysisDetailResponse
         id=analysis.id,
         score=analysis.score,
         health_grade=getattr(analysis.metrics, "health_grade", "C") if analysis.metrics else "C",
-        executive_summary=getattr(analysis.metrics, "executive_summary", "") if analysis.metrics else "",
+        executive_summary=(
+            getattr(analysis.metrics, "executive_summary", "") if analysis.metrics else ""
+        ),
         duration=analysis.duration,
         repo_type=analysis.repo_type,
         created_at=analysis.created_at,
@@ -120,8 +121,8 @@ async def get_analysis_by_id(
 async def list_analyses(
     offset: int = Query(0, ge=0, description="Offset pagination index"),
     limit: int = Query(20, ge=1, le=100, description="Page limit size"),
-    repo_type: Optional[str] = Query(None, description="Filter by repository profile"),
-    min_score: Optional[int] = Query(None, ge=0, le=100, description="Filter by minimum health score"),
+    repo_type: str | None = Query(None, description="Filter by repository profile"),
+    min_score: int | None = Query(None, ge=0, le=100, description="Filter by minimum health score"),
     db: Session = Depends(get_db),
 ):
     """Paginated list query with filtering support."""

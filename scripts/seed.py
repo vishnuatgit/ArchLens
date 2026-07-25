@@ -6,12 +6,10 @@ from pathlib import Path
 # Add the root directory to the python path so 'app' can be imported
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from app.repositories.db import SessionLocal, Base, engine
+from app.repositories.db import Base, SessionLocal, engine
 from app.services.analysis_service import AnalysisService
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("seed")
 
 # A list of popular, public repositories to analyze for the seed data

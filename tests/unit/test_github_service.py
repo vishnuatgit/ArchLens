@@ -1,11 +1,13 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
+import pytest
+
 from app.services.github_service import (
-    GitHubService,
-    parse_github_url,
     GitHubNotFoundError,
     GitHubRateLimitError,
+    GitHubService,
+    parse_github_url,
 )
 
 
@@ -150,7 +152,5 @@ async def test_fetch_contents_not_found():
         mock_response.headers = {"X-RateLimit-Remaining": "60"}
         mock_request.return_value = mock_response
 
-        result = await service.fetch_contents(
-            "owner", "repo", "tests/nonexistent-folder"
-        )
+        result = await service.fetch_contents("owner", "repo", "tests/nonexistent-folder")
         assert result == []

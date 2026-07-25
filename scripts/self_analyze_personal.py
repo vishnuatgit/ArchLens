@@ -1,6 +1,8 @@
 """Quick script to analyze ArchLens under personal profile."""
+
 import asyncio
-from app.repositories.db import SessionLocal, Base, engine
+
+from app.repositories.db import Base, SessionLocal, engine
 from app.services.analysis_service import AnalysisService
 
 

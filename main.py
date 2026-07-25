@@ -8,7 +8,6 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.exceptions import (
     AnalysisNotFoundError,
-    ArchLensError,
     InvalidRepositoryURLError,
     RateLimitExceededError,
     RepositoryNotFoundError,
@@ -96,4 +95,3 @@ def health_check():
         "app": "ArchLens",
         "version": "1.0.0",
     }
-

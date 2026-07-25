@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
 logger = logging.getLogger("ArchLens.metrics_service")
 
@@ -21,8 +21,8 @@ class MetricsService:
     """
 
     def calculate_documentation_score(
-        self, root_contents: List[Dict[str, Any]], repo_type: str
-    ) -> Tuple[int, List[str], List[str], List[str]]:
+        self, root_contents: list[dict[str, Any]], repo_type: str
+    ) -> tuple[int, list[str], list[str], list[str]]:
         """
         Evaluates repository documentation level (Max: 15 points).
         """
@@ -40,16 +40,14 @@ class MetricsService:
             name = item.get("name", "").lower()
             item_type = item.get("type", "")
 
-            if item_type == "file":
-                if name.startswith("readme"):
-                    has_readme = True
-                elif name.startswith("license") or name == "copying":
-                    has_license = True
-                elif name.startswith("contributing"):
-                    has_contributing = True
-            elif item_type == "dir":
-                if name in ["docs", "doc"]:
-                    has_docs_dir = True
+            if item_type == "file" and name.startswith("readme"):
+                has_readme = True
+            elif item_type == "file" and (name.startswith("license") or name == "copying"):
+                has_license = True
+            elif item_type == "file" and name.startswith("contributing"):
+                has_contributing = True
+            elif item_type == "dir" and name in ["docs", "doc"]:
+                has_docs_dir = True
 
         if has_readme:
             strengths.append("Found repository README.")
@@ -81,10 +79,10 @@ class MetricsService:
 
     def calculate_activity_score(
         self,
-        metadata: Dict[str, Any],
-        recent_commits: List[Dict[str, Any]],
+        metadata: dict[str, Any],
+        recent_commits: list[dict[str, Any]],
         repo_type: str,
-    ) -> Tuple[int, List[str], List[str], List[str]]:
+    ) -> tuple[int, list[str], list[str], list[str]]:
         """
         Evaluates repository release frequency and developer activity (Max: 15 points).
         """
@@ -96,9 +94,7 @@ class MetricsService:
         commit_count = len(recent_commits)
         if commit_count >= 10:
             score += 8
-            strengths.append(
-                f"High commit activity: {commit_count} commits in the last 30 days."
-            )
+            strengths.append(f"High commit activity: {commit_count} commits in the last 30 days.")
         elif commit_count >= 3:
             score += 4
             strengths.append(
@@ -106,29 +102,21 @@ class MetricsService:
             )
         elif commit_count >= 1:
             score += 2
-            strengths.append(
-                f"Low commit activity: {commit_count} commit(s) in the last 30 days."
-            )
+            strengths.append(f"Low commit activity: {commit_count} commit(s) in the last 30 days.")
         else:
             weaknesses.append("Zero commit activity recorded in the last 30 days.")
-            suggestions.append(
-                "Commit updates periodically to keep the repository active."
-            )
+            suggestions.append("Commit updates periodically to keep the repository active.")
 
         pushed_at_str = metadata.get("pushed_at")
         days_since_push = 999
         if pushed_at_str:
             try:
-                pushed_dt = datetime.fromisoformat(
-                    pushed_at_str.replace("Z", "+00:00")
-                ).replace(tzinfo=None)
-                days_since_push = (
-                    datetime.now(timezone.utc).replace(tzinfo=None) - pushed_dt
-                ).days
-            except Exception as e:
-                logger.error(
-                    f"Error parsing pushed_at timestamp '{pushed_at_str}': {e}"
+                pushed_dt = datetime.fromisoformat(pushed_at_str.replace("Z", "+00:00")).replace(
+                    tzinfo=None
                 )
+                days_since_push = (datetime.now(UTC).replace(tzinfo=None) - pushed_dt).days
+            except Exception as e:
+                logger.error(f"Error parsing pushed_at timestamp '{pushed_at_str}': {e}")
 
         if days_since_push <= 30:
             score += 7
@@ -143,20 +131,16 @@ class MetricsService:
             weaknesses.append(
                 f"Repository is becoming inactive (last pushed {days_since_push} days ago)."
             )
-            suggestions.append(
-                "Resume updates to prevent the repository from becoming stale."
-            )
+            suggestions.append("Resume updates to prevent the repository from becoming stale.")
         else:
-            weaknesses.append(
-                f"Repository is stale (last pushed {days_since_push} days ago)."
-            )
+            weaknesses.append(f"Repository is stale (last pushed {days_since_push} days ago).")
             suggestions.append("Resume repository updates.")
 
         return score, strengths, weaknesses, suggestions
 
     def calculate_organization_score(
-        self, root_contents: List[Dict[str, Any]], repo_type: str
-    ) -> Tuple[int, List[str], List[str], List[str]]:
+        self, root_contents: list[dict[str, Any]], repo_type: str
+    ) -> tuple[int, list[str], list[str], list[str]]:
         """
         Evaluates directory layouts and configuration file standards (Max: 15 points).
         """
@@ -183,18 +167,16 @@ class MetricsService:
             name = item.get("name", "").lower()
             item_type = item.get("type", "")
 
-            if item_type == "dir":
-                if name in ["tests", "test", "spec", "testing"]:
-                    has_tests = True
-                elif name in ["src", "app", "lib", "sources", "pkg"]:
-                    has_src = True
-            elif item_type == "file":
-                if (
-                    name.startswith(".")
-                    or name in config_basenames
-                    or any(name.endswith(ext) for ext in config_extensions)
-                ):
-                    has_configs = True
+            if item_type == "dir" and name in ["tests", "test", "spec", "testing"]:
+                has_tests = True
+            elif item_type == "dir" and name in ["src", "app", "lib", "sources", "pkg"]:
+                has_src = True
+            elif item_type == "file" and (
+                name.startswith(".")
+                or name in config_basenames
+                or any(name.endswith(ext) for ext in config_extensions)
+            ):
+                has_configs = True
 
         if repo_type == "personal":
             if has_src:
@@ -224,8 +206,8 @@ class MetricsService:
         return score, strengths, weaknesses, suggestions
 
     def calculate_community_score(
-        self, metadata: Dict[str, Any], contributor_count: int, repo_type: str
-    ) -> Tuple[int, List[str], List[str], List[str]]:
+        self, metadata: dict[str, Any], contributor_count: int, repo_type: str
+    ) -> tuple[int, list[str], list[str], list[str]]:
         """
         Evaluates repository community engagement based on stars, forks, and contributors (Max: 15 points).
         """
@@ -236,9 +218,7 @@ class MetricsService:
 
         if repo_type in ["personal", "enterprise"]:
             score = 15
-            strengths.append(
-                "Community metrics bypassed for Personal/Enterprise profile."
-            )
+            strengths.append("Community metrics bypassed for Personal/Enterprise profile.")
             return score, strengths, weaknesses, suggestions
 
         stars = metadata.get("stargazers_count", 0) or 0
@@ -265,14 +245,10 @@ class MetricsService:
 
         if contributor_count >= 5:
             score += 5
-            strengths.append(
-                f"Active contributor base with {contributor_count} contributors."
-            )
+            strengths.append(f"Active contributor base with {contributor_count} contributors.")
         elif contributor_count >= 2:
             score += 3
-            strengths.append(
-                f"Small active contributor group ({contributor_count} contributors)."
-            )
+            strengths.append(f"Small active contributor group ({contributor_count} contributors).")
         else:
             weaknesses.append("Only a single contributor.")
             suggestions.append("Open issues for good first contributions.")
@@ -281,10 +257,10 @@ class MetricsService:
 
     def calculate_maintainability_score(
         self,
-        metadata: Dict[str, Any],
-        workflow_contents: List[Dict[str, Any]],
+        metadata: dict[str, Any],
+        workflow_contents: list[dict[str, Any]],
         repo_type: str,
-    ) -> Tuple[int, List[str], List[str], List[str]]:
+    ) -> tuple[int, list[str], list[str], list[str]]:
         """
         Evaluates CI/CD setup, open issue management, and repository size health (Max: 15 points).
         """
@@ -296,9 +272,7 @@ class MetricsService:
         has_workflows = len(workflow_contents) > 0
         if has_workflows:
             score += 7
-            strengths.append(
-                f"Found {len(workflow_contents)} GitHub Actions workflow(s)."
-            )
+            strengths.append(f"Found {len(workflow_contents)} GitHub Actions workflow(s).")
         else:
             if repo_type == "personal":
                 score += 7
@@ -330,8 +304,8 @@ class MetricsService:
         return score, strengths, weaknesses, suggestions
 
     def calculate_security_score(
-        self, root_contents: List[Dict[str, Any]], repo_type: str
-    ) -> Tuple[int, List[str], List[str], List[str]]:
+        self, root_contents: list[dict[str, Any]], repo_type: str
+    ) -> tuple[int, list[str], list[str], list[str]]:
         """
         Evaluates security policies, environment secrets protection, and dependency lockfiles (Max: 12 points).
         """
@@ -382,7 +356,9 @@ class MetricsService:
             score += 4
             strengths.append("Found dependency lockfile for deterministic builds.")
         else:
-            weaknesses.append("Missing dependency lockfile (e.g. requirements.txt, package-lock.json).")
+            weaknesses.append(
+                "Missing dependency lockfile (e.g. requirements.txt, package-lock.json)."
+            )
             suggestions.append("Commit a dependency lockfile for reproducible deployments.")
 
         if has_env_example:
@@ -402,8 +378,8 @@ class MetricsService:
         return score, strengths, weaknesses, suggestions
 
     def calculate_code_quality_score(
-        self, root_contents: List[Dict[str, Any]], repo_type: str
-    ) -> Tuple[int, List[str], List[str], List[str]]:
+        self, root_contents: list[dict[str, Any]], repo_type: str
+    ) -> tuple[int, list[str], list[str], list[str]]:
         """
         Evaluates static analysis tools, linters, formatters, and type checkers (Max: 13 points).
         """
@@ -434,7 +410,9 @@ class MetricsService:
             item_type = item.get("type", "")
 
             if item_type == "file":
-                if name in linter_names or any(name.startswith(l) for l in [".eslintrc", ".prettierrc"]):
+                if name in linter_names or any(
+                    name.startswith(prefix) for prefix in [".eslintrc", ".prettierrc"]
+                ):
                     has_linter_config = True
                 elif name in type_names:
                     has_type_config = True
@@ -443,10 +421,14 @@ class MetricsService:
 
         if has_linter_config:
             score += 5
-            strengths.append("Found linter/formatter configuration (Ruff/ESLint/Prettier/pyproject.toml).")
+            strengths.append(
+                "Found linter/formatter configuration (Ruff/ESLint/Prettier/pyproject.toml)."
+            )
         else:
             weaknesses.append("Missing explicit linter or formatter configuration.")
-            suggestions.append("Configure a linter (e.g. Ruff, ESLint, or Black) in pyproject.toml.")
+            suggestions.append(
+                "Configure a linter (e.g. Ruff, ESLint, or Black) in pyproject.toml."
+            )
 
         if has_type_config:
             score += 4
@@ -456,7 +438,9 @@ class MetricsService:
                 score += 4
             else:
                 weaknesses.append("Missing explicit static type checker configuration.")
-                suggestions.append("Add static type checking configuration (e.g. mypy.ini or tsconfig.json).")
+                suggestions.append(
+                    "Add static type checking configuration (e.g. mypy.ini or tsconfig.json)."
+                )
 
         if has_pre_commit:
             score += 4
@@ -466,7 +450,9 @@ class MetricsService:
                 score += 4
             else:
                 weaknesses.append("No pre-commit git hooks detected.")
-                suggestions.append("Add a .pre-commit-config.yaml file to enforce quality on git commit.")
+                suggestions.append(
+                    "Add a .pre-commit-config.yaml file to enforce quality on git commit."
+                )
 
         return score, strengths, weaknesses, suggestions
 
@@ -494,17 +480,21 @@ class MetricsService:
         score: int,
         grade: str,
         repo_type: str,
-        strengths: List[str],
-        weaknesses: List[str],
+        strengths: list[str],
+        weaknesses: list[str],
     ) -> str:
         """
         Generates a concise 2-3 sentence natural language executive summary.
         """
-        tier = "production-grade" if score >= 80 else "moderate-health" if score >= 60 else "needs optimization"
+        tier = (
+            "production-grade"
+            if score >= 80
+            else "moderate-health" if score >= 60 else "needs optimization"
+        )
         profile_label = "open-source library" if repo_type == "library" else f"{repo_type} project"
 
         summary = (
-            f"This repository scored {score}/100 (Grade: {grade}) evaluated as a {profile_label}. "
+            f"This repository scored {score}/100 (Grade: {grade}) evaluated as a {tier} {profile_label}. "
             f"Key strengths include {strengths[0].lower() if strengths else 'a clean structure'} "
             f"and {strengths[1].lower() if len(strengths) > 1 else 'active maintenance'}. "
         )
@@ -518,14 +508,14 @@ class MetricsService:
 
     def calculate_overall_report(
         self,
-        metadata: Dict[str, Any],
-        languages: Dict[str, int],
-        root_contents: List[Dict[str, Any]],
+        metadata: dict[str, Any],
+        languages: dict[str, int],
+        root_contents: list[dict[str, Any]],
         contributor_count: int,
-        recent_commits: List[Dict[str, Any]],
-        workflow_contents: List[Dict[str, Any]],
+        recent_commits: list[dict[str, Any]],
+        workflow_contents: list[dict[str, Any]],
         repo_type: str = "library",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Orchestrates the full 7-dimension scoring report.
         """
@@ -563,13 +553,7 @@ class MetricsService:
 
         overall_score = min(
             100,
-            doc_score
-            + act_score
-            + org_score
-            + com_score
-            + mnt_score
-            + sec_score
-            + qlty_score,
+            doc_score + act_score + org_score + com_score + mnt_score + sec_score + qlty_score,
         )
 
         all_strengths = doc_str + act_str + org_str + com_str + mnt_str + sec_str + qlty_str
@@ -596,4 +580,3 @@ class MetricsService:
             "weaknesses": all_weaknesses,
             "suggestions": all_suggestions,
         }
-

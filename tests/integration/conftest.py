@@ -6,8 +6,8 @@ Creates the in-memory test database schema before the test session starts.
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.repositories.db import Base
 from app.models import db_models  # noqa: F401 — register all ORM models on Base
+from app.repositories.db import Base
 
 TEST_DB_URL = "sqlite:///./test_integration.db"
 

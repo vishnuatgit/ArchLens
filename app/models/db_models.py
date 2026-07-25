@@ -1,11 +1,13 @@
-from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
+from datetime import UTC, datetime
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.repositories.db import Base
 
 
 def utc_now_naive():
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class Repository(Base):
@@ -22,9 +24,7 @@ class Repository(Base):
     created_at = Column(DateTime, default=utc_now_naive, nullable=False)
 
     # Establish one-to-many relationship with analysis records
-    analyses = relationship(
-        "Analysis", back_populates="repository", cascade="all, delete-orphan"
-    )
+    analyses = relationship("Analysis", back_populates="repository", cascade="all, delete-orphan")
 
 
 class Analysis(Base):
@@ -40,9 +40,7 @@ class Analysis(Base):
     )
     score = Column(Integer, nullable=False)
     duration = Column(Float, nullable=False)
-    repo_type = Column(
-        String, default="library", server_default="library", nullable=False
-    )
+    repo_type = Column(String, default="library", server_default="library", nullable=False)
     created_at = Column(DateTime, default=utc_now_naive, nullable=False)
 
     # Establish relationships
@@ -60,9 +58,7 @@ class Metric(Base):
     __tablename__ = "metrics"
 
     id = Column(Integer, primary_key=True, index=True)
-    analysis_id = Column(
-        Integer, ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False
-    )
+    analysis_id = Column(Integer, ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False)
 
     # Raw GitHub Stats
     stars = Column(Integer, nullable=False, default=0)
@@ -84,12 +80,8 @@ class Metric(Base):
     score_breakdown_json = Column(
         Text, nullable=True
     )  # e.g., {"documentation": 15, "activity": 18, ...}
-    strengths_json = Column(
-        Text, nullable=True
-    )  # e.g., ["Has README", "Active last 30 days"]
-    weaknesses_json = Column(
-        Text, nullable=True
-    )  # e.g., ["No LICENSE", "High open issue ratio"]
+    strengths_json = Column(Text, nullable=True)  # e.g., ["Has README", "Active last 30 days"]
+    weaknesses_json = Column(Text, nullable=True)  # e.g., ["No LICENSE", "High open issue ratio"]
     suggestions_json = Column(
         Text, nullable=True
     )  # e.g., ["Add a LICENSE file to define usage rules"]

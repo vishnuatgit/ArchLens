@@ -32,3 +32,8 @@ coverage.xml
 # OS-specific
 .DS_Store
 Thumbs.db
+
+# Build and distribution
+*.egg-info/
+build/
+dist/

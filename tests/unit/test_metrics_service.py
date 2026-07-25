@@ -8,6 +8,7 @@ Unit tests for MetricsService Day 2 features:
 """
 
 import pytest
+
 from app.services.metrics_service import MetricsService
 
 
@@ -71,7 +72,12 @@ def test_generate_executive_summary(metrics_service):
 
 def test_calculate_overall_report_7_dimensions(metrics_service):
     report = metrics_service.calculate_overall_report(
-        metadata={"stargazers_count": 100, "forks_count": 25, "pushed_at": "2026-07-20T10:00:00Z", "size": 1000},
+        metadata={
+            "stargazers_count": 100,
+            "forks_count": 25,
+            "pushed_at": "2026-07-20T10:00:00Z",
+            "size": 1000,
+        },
         languages={"Python": 1000},
         root_contents=[
             {"name": "README.md", "type": "file"},
