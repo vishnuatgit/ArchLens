@@ -1,6 +1,6 @@
 # Contributing to ArchLens
 
-Thank you for your interest in contributing to ArchLens! We welcome all contributions, including bug fixes, new features, documentation improvements, and bug reports.
+Thank you for your interest in contributing to ArchLens! I welcome all contributions, including bug fixes, new features, documentation improvements, and bug reports.
 
 ## Getting Started
 
@@ -11,21 +11,21 @@ Thank you for your interest in contributing to ArchLens! We welcome all contribu
    cd ArchLens
    ```
 3. **Set Up Development Environment:**
-   We recommend creating a virtual environment and installing dev dependencies:
+   I recommend creating a virtual environment and installing dev dependencies:
    ```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    pip install -e ".[dev]"
    ```
 4. **Install Pre-commit Hooks:**
-   We use pre-commit to automatically check formatting and linting rules:
+   I use pre-commit to automatically check formatting and linting rules:
    ```bash
    pre-commit install
    ```
 
 ## Development Flow
 
-- **Code Formatting:** We use `black` for formatting and `ruff` for linting. They run automatically on commit. You can also run them manually:
+- **Code Formatting:** I use `black` for formatting and `ruff` for linting. They run automatically on commit. You can also run them manually:
   ```bash
   black app tests
   ruff check app tests

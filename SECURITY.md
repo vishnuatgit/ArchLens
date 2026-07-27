@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We actively support and patch security vulnerabilities in the following versions:
+I actively support and patch security vulnerabilities in the following versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -11,11 +11,11 @@ We actively support and patch security vulnerabilities in the following versions
 
 ## Reporting a Vulnerability
 
-We take the security of ArchLens seriously. If you find a security vulnerability, please report it immediately by sending an email to the repository owner rather than raising a public GitHub issue.
+I take the security of ArchLens seriously. If you find a security vulnerability, please report it immediately by sending an email to the repository owner rather than raising a public GitHub issue.
 
 Please include:
 - A detailed description of the vulnerability.
 - Steps to reproduce the issue (proof-of-concept code is highly appreciated).
 - Any potential impact on users or systems.
 
-We will acknowledge receipt of your vulnerability report within 48 hours and work with you to patch the issue promptly.
+I will acknowledge receipt of your vulnerability report within 48 hours and work with you to patch the issue promptly.
