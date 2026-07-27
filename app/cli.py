@@ -70,7 +70,7 @@ def analyze(
             raise typer.Exit(code=1)
         except RateLimitExceededError as e:
             console.print(
-                f"[bold red]Error:[/bold red] GitHub API rate limit exceeded. Reset time: {e.reset_time}"
+                f"[bold red]Error:[/bold red] GitHub API rate limit exceeded. Reset time: {e.reset_epoch}"
             )
             raise typer.Exit(code=1)
         except Exception as e:
