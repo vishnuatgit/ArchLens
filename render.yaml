@@ -1,0 +1,16 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Free plan: the service sleeps after inactivity, and the SQLite database
+# lives on the container's ephemeral disk, so it resets on every redeploy.
+services:
+  - type: web
+    name: archlens
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO

@@ -37,3 +37,7 @@ Thumbs.db
 *.egg-info/
 build/
 dist/
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/

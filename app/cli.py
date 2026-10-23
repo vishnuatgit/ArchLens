@@ -18,7 +18,7 @@ from app.exceptions import (
 from app.repositories.db import SessionLocal
 from app.services.analysis_service import AnalysisService
 
-app = typer.Typer(help="ArchLens CLI - AI-Powered Repository Intelligence Engine")
+app = typer.Typer(help="ArchLens CLI - engineering health scoring for GitHub repositories")
 console = Console()
 
 
@@ -100,10 +100,16 @@ def analyze(
     table.add_column("Dimension")
     table.add_column("Score", justify="right")
 
+    # Maximum points per dimension, matching MetricsService
+    max_points = {"security": 12, "code_quality": 13}
     for k, v in result["breakdown"].items():
         if isinstance(v, (int, float)):
-            dim_color = "green" if v >= 7 else "yellow" if v >= 4 else "red"
-            table.add_row(k.capitalize().replace("_", " "), f"[{dim_color}]{v}/10[/{dim_color}]")
+            max_v = max_points.get(k, 15)
+            ratio = v / max_v
+            dim_color = "green" if ratio >= 0.7 else "yellow" if ratio >= 0.4 else "red"
+            table.add_row(
+                k.capitalize().replace("_", " "), f"[{dim_color}]{v}/{max_v}[/{dim_color}]"
+            )
 
     console.print(table)
 

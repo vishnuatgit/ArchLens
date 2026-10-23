@@ -1,42 +1,34 @@
-# Stage 1: Build dependencies
+# Stage 1: build wheels for all runtime dependencies
 FROM python:3.11-slim AS builder
 
 WORKDIR /build
-
-# Install build essentials (needed for compiling some python packages)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements file
 COPY requirements.txt .
+RUN pip wheel --no-cache-dir --wheel-dir /build/wheels -r requirements.txt
 
-# Build wheels for all dependencies
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /build/wheels -r requirements.txt
-
-# Stage 2: Production
+# Stage 2: slim runtime image
 FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DATABASE_URL=sqlite:///./ArchLens.db
 
 WORKDIR /app
 
-# Don't run as root
-RUN useradd -m appuser && chown -R appuser /app
+# Install dependencies as root, then drop privileges
+COPY --from=builder /build/wheels /wheels
+RUN pip install /wheels/* && rm -rf /wheels \
+    && useradd --create-home --uid 1000 appuser \
+    && chown appuser:appuser /app
+
+COPY --chown=appuser:appuser . .
 USER appuser
 
-# Copy wheels and install them
-COPY --from=builder /build/wheels /wheels
-RUN pip install --no-cache /wheels/* && rm -rf /wheels
-
-# Copy application code
-COPY --chown=appuser:appuser . .
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV DATABASE_URL=sqlite:///./ArchLens.db
-
-# Expose application port
 EXPOSE 8000
 
-# Run the FastAPI application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Health check (python is used because slim images have no curl)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/health', timeout=4)"
+
+# Apply database migrations, then start the app (PORT is set by hosts such as Render)
+CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
