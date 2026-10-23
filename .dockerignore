@@ -17,3 +17,9 @@ htmlcov
 *.sqlite
 *.log
 tests/
+.github
+docs
+*.md
+!README.md
+render.yaml
+.ruff_cache

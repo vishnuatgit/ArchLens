@@ -7,6 +7,8 @@ Unit tests for MetricsService Day 2 features:
 - 7-dimension report calculation across repository profiles
 """
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from app.services.metrics_service import MetricsService
@@ -75,7 +77,7 @@ def test_calculate_overall_report_7_dimensions(metrics_service):
         metadata={
             "stargazers_count": 100,
             "forks_count": 25,
-            "pushed_at": "2026-07-20T10:00:00Z",
+            "pushed_at": (datetime.now(UTC) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "size": 1000,
         },
         languages={"Python": 1000},
