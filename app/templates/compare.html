@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+
+{% block title %}{% if summary %}{{ a }} vs {{ b }} &mdash; {% endif %}Compare repositories &mdash; ArchLens{% endblock %}
+{% block meta_description %}Compare the engineering health of two public GitHub repositories side by side, dimension by dimension.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/results.css?v={{ asset_version }}" />
+{% endblock %}
+
+{% block content %}
+
+<header class="page-header">
+    <div class="page-title-wrap">
+        <span class="page-title-icon">{{ ui.icon("compare") }}</span>
+        <h1>Compare two repositories</h1>
+    </div>
+    <p>
+        Side by side, dimension by dimension. Stored reports are reused whatever their age, so comparing
+        repositories analyzed before costs no GitHub requests; anything new is analyzed with the home page&rsquo;s limits.
+    </p>
+</header>
+
+<form class="card compare-card" method="GET" action="/compare" novalidate
+      data-busy-label="Comparing…" data-busy-swap="#compare-results" data-busy-skeleton="#compare-skeleton"
+      data-stored="{{ stored_reports|tojson|forceescape }}">
+    <div class="compare-fields">
+        <div class="field">
+            <label class="field-label series-label" for="compare-a"><span class="series-swatch" aria-hidden="true"></span>Repository A</label>
+            <input id="compare-a" class="input mono" type="text" name="a" value="{{ a }}" list="known-repos"
+                   placeholder="owner/repo" required autocomplete="off" autocapitalize="off" spellcheck="false" data-validate-repo
+                   {% if failed_side == "a" %}aria-invalid="true" aria-describedby="{{ 'compare-error' if form_error else 'side-error-a' }}"{% endif %} />
+            <p class="field-error" hidden>{{ ui.icon("alert-circle") }}<span></span></p>
+        </div>
+        <button type="button" class="icon-btn swap-btn" id="swap-repos" aria-label="Swap A and B" data-tip="Swap A and B">{{ ui.icon("swap") }}</button>
+        <div class="field">
+            <label class="field-label series-label" for="compare-b"><span class="series-swatch series-swatch-b" aria-hidden="true"></span>Repository B</label>
+            <input id="compare-b" class="input mono" type="text" name="b" value="{{ b }}" list="known-repos"
+                   placeholder="owner/repo" required autocomplete="off" autocapitalize="off" spellcheck="false" data-validate-repo
+                   {% if failed_side == "b" %}aria-invalid="true" aria-describedby="{{ 'compare-error' if form_error else 'side-error-b' }}"{% endif %} />
+            <p class="field-error" hidden>{{ ui.icon("alert-circle") }}<span></span></p>
+        </div>
+        <div class="field field-profile-wide">
+            <label class="field-label" for="compare-profile">Profile</label>
+            <select id="compare-profile" name="profile" class="select">
+                {% for value, label in profiles.items() %}
+                <option value="{{ value }}" {% if profile == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button class="btn btn-primary compare-btn" type="submit">{{ ui.icon("compare", "icon btn-icon") }}{{ ui.spinner() }}<span class="btn-label">Compare</span></button>
+    </div>
+
+    <!-- Suggests repositories that already have stored reports -->
+    <datalist id="known-repos">
+        {% for name in known_repos %}
+        <option value="{{ name }}"></option>
+        {% endfor %}
+    </datalist>
+
+    {% if example_pairs %}
+    <div class="chips">
+        <span class="chips-label">Try</span>
+        {% for first, second in example_pairs %}
+        <a class="chip" href="/compare?a={{ first|urlencode }}&amp;b={{ second|urlencode }}">{{ first }} vs {{ second }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <p class="form-progress" data-progress role="status" aria-live="polite"></p>
+
+    {% if form_error %}
+    <div class="alert" id="compare-error" role="alert">
+        {{ ui.icon("alert-circle") }}
+        <div class="alert-body"><span><strong>Can&rsquo;t compare.</strong> {{ form_error }}</span></div>
+    </div>
+    {% elif hint %}
+    <div class="alert alert-info compare-hint" role="note">
+        {{ ui.icon("info") }}
+        <div class="alert-body"><span>{{ hint }}</span></div>
+    </div>
+    {% endif %}
+</form>
+
+<div id="compare-results">
+{% if sides %}
+{% set left, right = sides[0], sides[1] %}
+
+{% if summary %}
+<div class="alert alert-info compare-summary" role="note">
+    {{ ui.icon("info") }}
+    <div class="alert-body"><span>{{ summary }}</span></div>
+</div>
+{% endif %}
+
+<div class="compare-sides">
+    {% for side in sides %}
+    {% set letter = "A" if loop.first else "B" %}
+    <article class="card side-card side-{{ letter|lower }}" aria-label="Repository {{ letter }}">
+        <p class="eyebrow series-label"><span class="series-swatch{% if not loop.first %} series-swatch-b{% endif %}" aria-hidden="true"></span>Repository {{ letter }}</p>
+        {% if side.report %}
+        {% set r = side.report %}
+        <div class="side-top">
+            {{ ui.gauge(r.score, r.tier, "md", r.full_name) }}
+            <div class="side-id">
+                <h2 class="side-name">{{ r.full_name }}</h2>
+                <div class="side-badges">{{ ui.grade_badge(r.grade, "sm") }}{{ ui.tier_badge(r.tier) }}</div>
+                <p class="side-meta">
+                    {{ r.profile_label }} profile &middot; analyzed <span class="mono nowrap">{{ r.created_at.strftime("%Y-%m-%d") }}</span>
+                    {% if r.is_example %}<span class="tag tag-example">Example</span>{% endif %}
+                </p>
+            </div>
+        </div>
+        <a class="btn btn-sm side-link" href="/analysis/{{ r.id }}">Open the full report{{ ui.icon("arrow-right") }}</a>
+        {% else %}
+        <h2 class="side-name">{{ side.query }}</h2>
+        <div class="alert" role="alert" id="side-error-{{ letter|lower }}">
+            {{ ui.icon("alert-circle") }}
+            <div class="alert-body">
+                <span><strong>No report.</strong> {{ side.error }}</span>
+            </div>
+        </div>
+        {% endif %}
+    </article>
+    {% endfor %}
+</div>
+
+{% if left.report and right.report %}
+{% set ra, rb = left.report, right.report %}
+<div class="compare-charts">
+    <section class="card" aria-labelledby="shape-title">
+        <div class="card-header">
+            <div class="card-title-wrap">
+                <span class="card-icon card-icon-info">{{ ui.icon("activity") }}</span>
+                <h2 id="shape-title" class="card-title">Dimension profiles</h2>
+            </div>
+            <ul class="legend" aria-label="Legend">
+                <li class="series-label"><span class="series-swatch" aria-hidden="true"></span><span class="mono">{{ ra.full_name }}</span></li>
+                <li class="series-label"><span class="series-swatch series-swatch-b" aria-hidden="true"></span><span class="mono">{{ rb.full_name }}</span></li>
+            </ul>
+        </div>
+        {{ ui.radar(radar, show_values=false) }}
+        {% set ns = namespace(a=[], b=[], tied=0) %}
+        {% for da in ra.dimensions %}
+        {% set dbb = rb.dimension(da.key) %}
+        {% if da.percent > dbb.percent %}{% set ns.a = ns.a + [da.label] %}{% elif da.percent < dbb.percent %}{% set ns.b = ns.b + [da.label] %}{% else %}{% set ns.tied = ns.tied + 1 %}{% endif %}
+        {% endfor %}
+        <dl class="radar-notes">
+            <div>
+                <dt><span class="series-swatch" aria-hidden="true"></span><span class="mono keep-case">{{ ra.full_name }}</span> leads</dt>
+                <dd>{{ ns.a|join(", ") if ns.a else "No dimension" }}</dd>
+            </div>
+            <div>
+                <dt><span class="series-swatch series-swatch-b" aria-hidden="true"></span><span class="mono keep-case">{{ rb.full_name }}</span> leads</dt>
+                <dd>{{ ns.b|join(", ") if ns.b else "No dimension" }}</dd>
+            </div>
+            {% if ns.tied %}
+            <div>
+                <dt>Tied</dt>
+                <dd>{{ ns.tied }} {{ "dimension" if ns.tied == 1 else "dimensions" }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+    </section>
+
+    <section class="card" aria-labelledby="dims-title">
+        <div class="card-header">
+            <div class="card-title-wrap">
+                <span class="card-icon">{{ ui.icon("list") }}</span>
+                <h2 id="dims-title" class="card-title">Dimension by dimension</h2>
+            </div>
+            <span class="card-subtitle">Bold marks the higher score; the last column is A minus B</span>
+        </div>
+        <div class="table-wrap">
+            <table class="table compare-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Dimension</th>
+                        <th scope="col" class="cell-score">A <span class="th-name">{{ ra.full_name }}</span></th>
+                        <th scope="col" class="cell-score">B <span class="th-name">{{ rb.full_name }}</span></th>
+                        <th scope="col" class="num">A&minus;B</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for da in ra.dimensions %}
+                    {% set dbb = rb.dimension(da.key) %}
+                    {% set diff = da.points - dbb.points %}
+                    <tr>
+                        <th scope="row"><span class="series-label">{{ ui.dim_dot(da.key) }}{{ da.label }}</span></th>
+                        <td class="cell-score">
+                            <span class="mono {% if diff > 0 %}lead{% endif %}">{{ da.points }}<span class="of">/{{ da.max_points }}</span></span>
+                            <span class="bar" aria-hidden="true"><span class="bar-fill" style="--w: {{ da.percent }}%"></span></span>
+                        </td>
+                        <td class="cell-score cell-b">
+                            <span class="mono {% if diff < 0 %}lead{% endif %}">{{ dbb.points }}<span class="of">/{{ dbb.max_points }}</span></span>
+                            <span class="bar" aria-hidden="true"><span class="bar-fill" style="--w: {{ dbb.percent }}%"></span></span>
+                        </td>
+                        <td class="num"><span class="diff {% if diff > 0 %}diff-a{% elif diff < 0 %}diff-b{% else %}diff-zero{% endif %}">{{ ("%+d"|format(diff)).replace("-", "−") if diff else "0" }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    {% set total_diff = ra.score - rb.score %}
+                    <tr>
+                        <th scope="row">Total</th>
+                        <td class="mono"><span class="{% if total_diff > 0 %}lead{% endif %}">{{ ra.score }}</span><span class="of">/100</span></td>
+                        <td class="mono"><span class="{% if total_diff < 0 %}lead{% endif %}">{{ rb.score }}</span><span class="of">/100</span></td>
+                        <td class="num"><span class="diff {% if total_diff > 0 %}diff-a{% elif total_diff < 0 %}diff-b{% else %}diff-zero{% endif %}">{{ ("%+d"|format(total_diff)).replace("-", "−") if total_diff else "0" }}</span></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+</div>
+
+<section class="card" aria-labelledby="next-title">
+    <div class="card-header">
+        <div class="card-title-wrap">
+            <span class="card-icon card-icon-warn">{{ ui.icon("lightbulb") }}</span>
+            <h2 id="next-title" class="card-title">What each should fix first</h2>
+        </div>
+        <span class="card-subtitle">The top three fixes from each report</span>
+    </div>
+    <div class="compare-next">
+        {% for r in [ra, rb] %}
+        {% set plan = fix_plans[loop.index0] %}
+        <div>
+            <h3><span class="series-swatch{% if not loop.first %} series-swatch-b{% endif %}" aria-hidden="true"></span>{{ r.full_name }}</h3>
+            {% if plan and plan.fixes %}
+            <ol class="fix-list">
+                {% for fix in plan.fixes[:3] %}
+                <li class="fix-item">
+                    <span class="fix-index mono">{{ loop.index }}</span>
+                    <span class="fix-body">
+                        <span class="fix-action">{{ fix.action }}</span>
+                        <span class="fix-meta">{{ ui.dim_dot(fix.dimension_key) }}{{ fix.dimension_label }} &middot; {{ fix.check_label }}</span>
+                    </span>
+                    <span class="gain {% if fix.exact %}gain-exact{% endif %}">{% if not fix.exact %}up to {% endif %}+{{ fix.gain }}</span>
+                </li>
+                {% endfor %}
+            </ol>
+            {% elif r.suggestions %}
+            <ol class="fix-list">
+                {% for item in r.suggestions[:3] %}
+                <li class="fix-item"><span class="fix-index mono">{{ loop.index }}</span><span class="fix-body"><span class="fix-action">{{ item }}</span></span></li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="muted small">Nothing to fix for this profile.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% elif not form_error %}
+<div class="card">
+    <div class="empty-state">
+        <span class="empty-icon">{{ ui.icon("compare") }}</span>
+        <p class="empty-title">Pick two repositories</p>
+        <p>
+            Any public repository works.{% if known_repos %} The {{ known_repos|length }} stored
+            {{ "repository compares" if known_repos|length == 1 else "repositories compare" }} without any GitHub requests.{% endif %}
+        </p>
+    </div>
+</div>
+{% endif %}
+</div>
+<!-- Shown while a comparison loads -->
+<div class="compare-skeleton" id="compare-skeleton" hidden aria-hidden="true">
+    <div class="compare-sides">
+        {% for _ in range(2) %}
+        <div class="card side-card">
+            <span class="skeleton" style="width: 120px; height: 12px"></span>
+            <div class="side-top">
+                <span class="skeleton skeleton-round"></span>
+                <div class="side-id">
+                    <span class="skeleton" style="width: 180px; height: 20px"></span>
+                    <span class="skeleton" style="width: 140px; height: 14px"></span>
+                    <span class="skeleton" style="width: 220px; height: 12px"></span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="card"><span class="skeleton" style="height: 260px"></span></div>
+</div>
+
+{% endblock %}

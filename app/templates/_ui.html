@@ -1,0 +1,119 @@
+{#- Shared building blocks: one set of stroke icons, the score gauge, grade badges and the radar chart. -#}
+
+{%- set ICONS = {
+    "search": '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    "compare": '<path d="M7 4v13"/><path d="m4 14 3 3 3-3"/><path d="M17 20V7"/><path d="m14 10 3-3 3 3"/>',
+    "ruler": '<path d="M4 6h16M4 12h10M4 18h13"/><circle cx="18" cy="12" r="2"/>',
+    "info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
+    "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    "moon": '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    "menu": '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    "x": '<path d="M6 6l12 12M18 6 6 18"/>',
+    "github": '<path d="M9 19c-4.5 1.4-4.5-2.5-6.3-3m12.6 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.7-1.4 5.7-6.2a4.8 4.8 0 0 0-1.3-3.3 4.5 4.5 0 0 0-.1-3.3s-1.1-.3-3.5 1.3a12 12 0 0 0-6.3 0C6.9 2.4 5.8 2.7 5.8 2.7a4.5 4.5 0 0 0-.1 3.3A4.8 4.8 0 0 0 4.4 9.3c0 4.8 2.9 5.9 5.7 6.2-.6.6-.6 1.2-.5 2V21"/>',
+    "arrow-right": '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+    "arrow-left": '<path d="M19 12H5"/><path d="m11 18-6-6 6-6"/>',
+    "external": '<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    "link": '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>',
+    "copy": '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>',
+    "check": '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    "download": '<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>',
+    "file": '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
+    "chevron-down": '<path d="m6 9 6 6 6-6"/>',
+    "chevron-right": '<path d="m9 6 6 6-6 6"/>',
+    "chevron-left": '<path d="m15 6-6 6 6 6"/>',
+    "star": '<path d="m12 3 2.8 5.6 6.2.9-4.5 4.4 1 6.1L12 17.1 6.5 20l1-6.1L3 9.5l6.2-.9z"/>',
+    "fork": '<circle cx="6" cy="5" r="2"/><circle cx="18" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><path d="M6 7v1a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V7"/><path d="M12 11v6"/>',
+    "issue": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.5"/>',
+    "users": '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18.5 14.3A6.5 6.5 0 0 1 21.5 20"/>',
+    "database": '<ellipse cx="12" cy="5.5" rx="7.5" ry="2.5"/><path d="M4.5 5.5v13c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5v-13"/><path d="M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5"/>',
+    "code": '<path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/>',
+    "commit": '<circle cx="12" cy="12" r="3.5"/><path d="M3 12h5.5M15.5 12H21"/>',
+    "workflow": '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M6.5 10v3a2 2 0 0 0 2 2H14"/>',
+    "lock": '<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>',
+    "lightbulb": '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z"/>',
+    "alert": '<path d="M10.3 4 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/>',
+    "alert-circle": '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 16h.01"/>',
+    "check-circle": '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 10"/>',
+    "x-circle": '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
+    "minus-circle": '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+    "half-circle": '<circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
+    "gift": '<circle cx="12" cy="12" r="9" stroke-dasharray="3 2.6"/><path d="m8 12.5 2.7 2.7L16 10"/>',
+    "help": '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8"/><path d="M12 17h.01"/>',
+    "refresh": '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>',
+    "layers": '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+    "activity": '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+    "repo": '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/>',
+    "swap": '<path d="M7 7h13"/><path d="m16 3 4 4-4 4"/><path d="M17 17H4"/><path d="m8 13-4 4 4 4"/>',
+    "trend": '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    "shield": '<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+    "list": '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+    "badge": '<rect x="2.5" y="8" width="19" height="8" rx="2"/><path d="M11 8v8"/>',
+    "api": '<path d="M7 8 3 12l4 4"/><path d="m17 8 4 4-4 4"/><path d="m14 5-4 14"/>',
+    "dot": '<circle cx="12" cy="12" r="3" fill="currentColor"/>',
+} -%}
+
+{% macro icon(name, cls="icon") -%}
+<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">{{ ICONS[name]|safe }}</svg>
+{%- endmacro %}
+
+{#- Grade badge, coloured like the original: A green, B cyan, C amber, D and F red -#}
+{% macro grade_badge(grade, size="") -%}
+<span class="grade-badge grade-{{ grade|lower|replace('+', 'plus') }}{% if size %} grade-badge-{{ size }}{% endif %}" title="Grade {{ grade }}">{{ grade }}</span>
+{%- endmacro %}
+
+{% macro tier_badge(tier) -%}
+<span class="tier-badge tier-{{ tier.key }}">{{ icon({'high': 'check-circle', 'mid': 'alert-circle', 'low': 'alert'}[tier.key], 'icon icon-xs') }}{{ tier.label }}</span>
+{%- endmacro %}
+
+{#- Circular score gauge. The arc length is the score; motion is CSS only. -#}
+{% macro gauge(score, tier, size="lg", label="Overall score") -%}
+<div class="gauge gauge-{{ size }}" role="img" aria-label="{{ label }}: {{ score }} out of 100">
+    <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="gauge-track" cx="60" cy="60" r="52" pathLength="100" />
+        <circle class="gauge-fill gauge-{{ tier.key }}" cx="60" cy="60" r="52" pathLength="100" style="--score: {{ score }}" />
+    </svg>
+    <span class="gauge-label">
+        <span class="gauge-number">{{ score }}</span>
+        <span class="gauge-total">/100</span>
+    </span>
+</div>
+{%- endmacro %}
+
+{#- Radar chart of dimension scores. SVG shapes scale; HTML labels keep their size. -#}
+{% macro radar(chart, show_values=true, series_class=("series-a", "series-b")) -%}
+<div class="radar" style="aspect-ratio: {{ chart.aspect }}">
+    <svg class="radar-svg" viewBox="{{ chart.view_box }}" aria-hidden="true">
+        {% for ring in chart.rings %}
+        <polygon class="radar-ring{% if loop.last %} radar-ring-outer{% endif %}" points="{{ ring }}" />
+        {% endfor %}
+        {% for axis in chart.axes %}
+        <line class="radar-axis" x1="120" y1="120" x2="{{ axis.x }}" y2="{{ axis.y }}" />
+        {% endfor %}
+        {% for series in chart.series %}
+        {% set cls = series_class[loop.index0] %}
+        <g class="radar-series {{ cls }}">
+            <polygon class="radar-area" points="{{ series.polygon }}" />
+            {% for v in series.vertices %}
+            <circle class="radar-dot" cx="{{ v.x }}" cy="{{ v.y }}" r="3.5"><title>{{ series.name }}, {{ v.label }}: {{ v.points }} of {{ v.max_points }}</title></circle>
+            {% endfor %}
+        </g>
+        {% endfor %}
+    </svg>
+    {% for axis in chart.axes %}
+    {% set v = chart.series[0].vertices[loop.index0] %}
+    <span class="radar-label radar-label-{{ axis.anchor }}" style="left: {{ axis.label_left }}%; top: {{ axis.label_top }}%">
+        <span class="radar-label-name">{{ axis.label }}</span>
+        {% if show_values %}<span class="radar-label-value">{{ v.points }}/{{ v.max_points }}</span>{% endif %}
+    </span>
+    {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro dim_dot(key) -%}
+<span class="dim-dot dim-{{ key }}" aria-hidden="true"></span>
+{%- endmacro %}
+
+{% macro spinner() -%}
+<span class="spinner" aria-hidden="true"></span>
+{%- endmacro %}

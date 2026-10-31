@@ -26,3 +26,10 @@ class Settings(BaseSettings):
 
 # Instantiate settings to be imported across the application
 settings = Settings()
+
+# Project links shown in the footer, the About page and exported reports
+SITE = {
+    "author": "Vishnu Jayanth",
+    "portfolio_url": "https://vishnuatgit.github.io",
+    "repo_url": "https://github.com/vishnuatgit/ArchLens",
+}

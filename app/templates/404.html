@@ -1,17 +1,31 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui %}
 
 {% block title %}{{ heading|default("Page not found") }} &mdash; ArchLens{% endblock %}
 
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/pages.css?v={{ asset_version }}" />
+{% endblock %}
+
 {% block content %}
-<div class="empty-state error-page">
-    <div class="error-code mono">{{ status|default(404) }}</div>
-    <p class="empty-title">{{ heading|default("Page not found") }}</p>
-    <p class="text-secondary text-sm error-message">
+<section class="card error-page" aria-labelledby="error-title">
+    <span class="error-icon">{{ ui.icon("alert-circle" if status|default(404) >= 500 else "search") }}</span>
+    <p class="error-code mono">Error {{ status|default(404) }}</p>
+    <h1 id="error-title">{{ heading|default("Page not found") }}</h1>
+    <p class="error-message">
         {{ message|default("There's nothing at this address. Check the link, or start from the home page.") }}
     </p>
+
+    {% if analyze_repo %}
     <div class="error-actions">
-        <a href="/" class="btn btn-primary">Analyze a Repository</a>
-        <a href="/history" class="btn btn-secondary">Browse History</a>
+        <a href="/?url={{ analyze_repo|urlencode }}&amp;autostart=1" class="btn btn-primary">{{ ui.icon("search") }}Analyze<span class="mono">{{ analyze_repo }}</span></a>
+        <a href="/history" class="btn">{{ ui.icon("clock") }}Browse reports</a>
     </div>
-</div>
+    {% else %}
+    <div class="error-actions">
+        <a href="/" class="btn btn-primary">{{ ui.icon("search") }}Analyze a repository</a>
+        <a href="/history" class="btn">{{ ui.icon("clock") }}Browse reports</a>
+    </div>
+    {% endif %}
+</section>
 {% endblock %}

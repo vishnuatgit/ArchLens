@@ -24,6 +24,16 @@ app = typer.Typer(help="ArchLens CLI - engineering health scoring for GitHub rep
 console = Console()
 
 
+@app.callback()
+def main() -> None:
+    """
+    ArchLens: engineering health scores for public GitHub repositories.
+
+    A callback keeps `analyze` a named subcommand (`archlens analyze owner/repo`);
+    without one, Typer folds a single-command app into the command itself.
+    """
+
+
 async def async_analyze(url: str, profile: str) -> dict:
     """Async wrapper to run the AnalysisService."""
     service = AnalysisService()

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+
+{% block title %}How scoring works &mdash; ArchLens{% endblock %}
+{% block meta_description %}Every check ArchLens runs, what it looks for and how many points it is worth, generated from the scoring code.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/pages.css?v={{ asset_version }}" />
+{% endblock %}
+
+{% block content %}
+
+<header class="page-header">
+    <div class="page-title-wrap">
+        <span class="page-title-icon">{{ ui.icon("ruler") }}</span>
+        <h1>How scoring works</h1>
+    </div>
+    <p>
+        ArchLens adds up points from seven dimensions, {{ total_points }} in all, and turns the total into a letter grade.
+        This page is generated from the constants the scorer itself uses, in
+        <code>app/services/metrics_service.py</code>, so it always matches the code.
+    </p>
+</header>
+
+<div class="card profile-card">
+    <div class="profile-row">
+        <p class="field-label" id="profile-picker-label">Profile</p>
+        <nav class="tabs" aria-labelledby="profile-picker-label">
+            {% for value, label, description in profile_options %}
+            <a class="tab" href="/scoring?profile={{ value }}" {% if value == profile %}aria-current="page"{% endif %}>{{ value|capitalize }}</a>
+            {% endfor %}
+        </nav>
+    </div>
+    {% for value, label, description in profile_options if value == profile %}
+    <p class="profile-note"><strong>{{ label }}.</strong> {{ description }}</p>
+    {% endfor %}
+    <ul class="status-legend small">
+        <li><span class="status-given">given</span> full points without checking, under this profile</li>
+        <li><span class="status-skipped">not scored</span> left out of this profile</li>
+    </ul>
+</div>
+
+<!-- Where the 100 points come from -->
+<section class="card points-card" aria-labelledby="points-title">
+    <div class="card-header">
+        <div class="card-title-wrap">
+            <span class="card-icon">{{ ui.icon("activity") }}</span>
+            <h2 id="points-title" class="card-title">Where the {{ total_points }} points come from</h2>
+        </div>
+    </div>
+    {# One proportional bar at every width; names and points sit in the legend below #}
+    <div class="points-bar points-bar-lg" role="img" aria-label="How the {{ total_points }} points split: {% for key, label, points in point_shares %}{{ label }} {{ points }}{% if not loop.last %}, {% endif %}{% endfor %}">
+        {% for key, label, points in point_shares %}
+        <span class="points-seg dim-{{ key }}" style="flex: {{ points }}" title="{{ label }}: {{ points }} points"></span>
+        {% endfor %}
+    </div>
+    <ul class="dim-legend">
+        {% for key, label, points in point_shares %}
+        <li><a class="dim-tag" href="#{{ key }}">{{ ui.dim_dot(key) }}{{ label }}<span class="dim-tag-points mono">{{ points }}</span></a></li>
+        {% endfor %}
+    </ul>
+</section>
+
+<div class="scoring-layout">
+    <aside class="scoring-side">
+        <div class="card side-card-sticky">
+            <h2 class="side-title">Dimensions</h2>
+            <table class="table compact-table">
+                <tbody>
+                    {% for dim in guide %}
+                    <tr>
+                        <th scope="row"><a href="#{{ dim.key }}" class="side-dim">{{ ui.dim_dot(dim.key) }}{{ dim.label }}</a></th>
+                        <td class="num mono">{{ dim.max_points }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr><th scope="row">Total</th><td class="num mono">{{ total_points }}</td></tr>
+                </tfoot>
+            </table>
+
+            <h2 class="side-title" id="grades">Grades</h2>
+            <table class="table compact-table">
+                <tbody>
+                    {% for grade, low, high in grades %}
+                    <tr>
+                        <th scope="row">{{ ui.grade_badge(grade, "sm") }}</th>
+                        <td class="num mono">{{ low }}&ndash;{{ high }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h2 class="side-title">Tiers</h2>
+            <table class="table compact-table">
+                <tbody>
+                    {% for key, label, low, high in tiers %}
+                    <tr>
+                        <th scope="row"><span class="tier-badge tier-{{ key }}">{{ label }}</span></th>
+                        <td class="num mono">{{ low }}&ndash;{{ high }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </aside>
+
+    <div class="scoring-main">
+        {% for dim in guide %}
+        <section class="card dimension" id="{{ dim.key }}" aria-labelledby="{{ dim.key }}-title">
+            <div class="card-header">
+                <div class="card-title-wrap">
+                    {{ ui.dim_dot(dim.key) }}
+                    <h2 id="{{ dim.key }}-title" class="card-title">{{ dim.label }}</h2>
+                </div>
+                <span class="points-pill mono">{{ dim.max_points }} points</span>
+            </div>
+            <p class="dimension-question">{{ dim.question }}</p>
+
+            <table class="table table-sticky checks">
+                <thead>
+                    <tr>
+                        <th scope="col">Check</th>
+                        <th scope="col">What it looks for</th>
+                        <th scope="col" class="num">Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for check in dim.checks %}
+                    <tr class="check-row check-{{ check.status }}">
+                        <th scope="row" class="check-name">{{ check.label }}</th>
+                        <td class="check-detail">
+                            <p>{{ check.detail }}</p>
+                            {% if check.names %}
+                            <p class="names">
+                                {% for name in check.names %}<code>{{ name }}</code> {% endfor %}
+                            </p>
+                            {% endif %}
+                            {% if check.bands %}
+                            <table class="bands">
+                                <caption class="visually-hidden">Partial credit for {{ check.label|lower }}</caption>
+                                <tbody>
+                                    {% for condition, points in check.bands %}
+                                    <tr><td class="mono">{{ condition }}</td><td class="num mono">{{ points }}</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% endif %}
+                        </td>
+                        <td class="num check-points">
+                            {% if check.status == "skipped" %}
+                            <span class="status-skipped">not scored</span>
+                            {% elif check.status == "given" %}
+                            <span class="mono">{{ check.points }}</span> <span class="status-given">given</span>
+                            {% else %}
+                            <span class="mono">{{ check.points }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+        {% endfor %}
+
+        <section class="card dimension" aria-labelledby="notes-title">
+            <div class="card-header">
+                <div class="card-title-wrap">
+                    <span class="card-icon card-icon-info">{{ ui.icon("info") }}</span>
+                    <h2 id="notes-title" class="card-title">Good to know</h2>
+                </div>
+            </div>
+            <ul class="plain-list">
+                <li>File and folder names are matched case-insensitively. Apart from CI workflows, which are read from <code>.github/workflows</code>, only the repository&rsquo;s root directory is checked.</li>
+                <li>Counts read from GitHub list endpoints stop at {{ api_page_cap }} (one page of results), which is enough for every threshold above.</li>
+                <li>A check rewards the presence of a file, not its quality: an empty <code>SECURITY.md</code> earns the same points as a thorough one. Treat the score as a checklist, not a verdict.</li>
+                <li>Each report shows these checks with what was found, under &ldquo;Dimension scores&rdquo;. A test runs the real scorer against this page&rsquo;s numbers.</li>
+            </ul>
+        </section>
+    </div>
+</div>
+
+{% endblock %}

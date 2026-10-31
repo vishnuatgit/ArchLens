@@ -15,9 +15,17 @@ class RepoType(StrEnum):
     ENTERPRISE = "enterprise"
 
 
+# Names shown in forms and reports
+PROFILE_LABELS = {
+    RepoType.LIBRARY: "Open-source library",
+    RepoType.PERSONAL: "Personal project",
+    RepoType.ENTERPRISE: "Enterprise app",
+}
+
+
 @dataclass(frozen=True)
 class ScoreTier:
-    """A named score band; `key` doubles as the CSS modifier (score-high, gauge-high...)."""
+    """A named score band; `key` doubles as the CSS modifier (score-high, tier-high...)."""
 
     key: str
     label: str
@@ -32,6 +40,17 @@ SCORE_TIERS = (
     ScoreTier("low", "Needs Optimization", 0),
 )
 
+# Display names of the seven dimensions, in report order
+DIMENSION_LABELS = {
+    "documentation": "Documentation",
+    "activity": "Activity",
+    "organization": "Organization",
+    "community": "Community",
+    "maintainability": "Maintainability",
+    "security": "Security",
+    "code_quality": "Code quality",
+}
+
 # Maximum points per dimension (they add up to 100)
 DIMENSION_MAX_POINTS = {
     "documentation": 15,
@@ -43,8 +62,109 @@ DIMENSION_MAX_POINTS = {
     "code_quality": 13,
 }
 
+# Letter grades and the lowest score that earns each one, best first
+GRADE_SCALE = (
+    ("A+", 95),
+    ("A", 85),
+    ("B+", 75),
+    ("B", 65),
+    ("C", 50),
+    ("D", 35),
+    ("F", 0),
+)
+
 # GitHub list endpoints are read one page at a time, so counts stop at this value
 API_PAGE_CAP = 100
+
+
+# ---------------------------------------------------------------------------
+# Scoring rules
+#
+# Every point value, threshold and file name the scorer uses is defined here.
+# The MetricsService methods below apply them, and the "How scoring works" page
+# (app/services/scoring_guide.py) renders the same constants, so the page and
+# the scorer cannot disagree. tests/unit/test_scoring_guide.py checks that the
+# points in each dimension add up to DIMENSION_MAX_POINTS for every profile.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Band:
+    """Partial credit: `points` are awarded when a measured value reaches `limit`."""
+
+    limit: int
+    points: int
+
+
+# Documentation
+README_POINTS = 7
+LICENSE_POINTS = 4
+CONTRIBUTING_OR_DOCS_POINTS = 4
+PERSONAL_README_POINTS = 15  # the personal profile only asks for a README
+DOCS_DIR_NAMES = ("docs", "doc")
+
+# Activity. Commit bands are minimums; push bands are the most days since the last push.
+COMMIT_BANDS = (Band(10, 8), Band(3, 4), Band(1, 2))
+PUSH_RECENCY_BANDS = (Band(30, 7), Band(90, 4), Band(180, 2))
+
+# Organization
+TESTS_DIR_POINTS = 6
+SOURCE_DIR_POINTS = 5
+CONFIG_FILES_POINTS = 4
+PERSONAL_SOURCE_DIR_POINTS = 8
+PERSONAL_CONFIG_FILES_POINTS = 7
+TEST_DIR_NAMES = ("tests", "test", "spec", "testing")
+SOURCE_DIR_NAMES = ("src", "app", "lib", "sources", "pkg")
+CONFIG_FILE_EXTENSIONS = (".toml", ".ini", ".json", ".yaml", ".yml", ".txt", ".lock")
+CONFIG_FILE_NAMES = ("setup.py", "makefile", "dockerfile", "gemfile", "go.mod", "cargo.toml")
+
+# Community (minimums). Personal and enterprise projects are not judged on popularity.
+STAR_BANDS = (Band(50, 5), Band(10, 3))
+FORK_BANDS = (Band(20, 5), Band(5, 3))
+CONTRIBUTOR_BANDS = (Band(5, 5), Band(2, 3))
+COMMUNITY_WAIVED_PROFILES = (RepoType.PERSONAL, RepoType.ENTERPRISE)
+
+# Maintainability. Issue and size bands are maximums (size in KB, as GitHub reports it).
+WORKFLOW_POINTS = 7
+OPEN_ISSUE_BANDS = (Band(0, 4), Band(10, 2))
+REPO_SIZE_BANDS_KB = (Band(50_000, 4), Band(200_000, 2))
+
+# Security
+GITIGNORE_POINTS = 3
+LOCKFILE_POINTS = 4
+ENV_TEMPLATE_POINTS = 2
+SECURITY_POLICY_POINTS = 3
+LOCKFILE_NAMES = (
+    "requirements.txt",
+    "poetry.lock",
+    "pipfile.lock",
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "cargo.lock",
+    "go.sum",
+    "gemfile.lock",
+)
+ENV_TEMPLATE_NAMES = (".env.example", ".env.sample", ".env.template")
+
+# Code quality
+LINTER_CONFIG_POINTS = 5
+TYPE_CHECKER_POINTS = 4
+PRE_COMMIT_POINTS = 4
+LINTER_CONFIG_NAMES = (
+    "pyproject.toml",
+    "ruff.toml",
+    ".ruff.toml",
+    ".flake8",
+    ".eslintrc",
+    ".eslintrc.js",
+    ".eslintrc.json",
+    "biome.json",
+    ".prettierrc",
+)
+LINTER_CONFIG_PREFIXES = (".eslintrc", ".prettierrc")
+TYPE_CHECKER_CONFIG_NAMES = ("mypy.ini", ".mypy.ini", "tsconfig.json")
+PRE_COMMIT_CONFIG_NAMES = (".pre-commit-config.yaml", ".pre-commit-config.yml")
 
 
 def score_tier(score: float) -> ScoreTier:
@@ -53,6 +173,14 @@ def score_tier(score: float) -> ScoreTier:
         if score >= tier.min_score:
             return tier
     return SCORE_TIERS[-1]
+
+
+def grade_for_score(score: int) -> str:
+    """Maps a 0-100 score to its letter grade: A+, A, B+, B, C, D or F."""
+    for grade, min_score in GRADE_SCALE:
+        if score >= min_score:
+            return grade
+    return GRADE_SCALE[-1][0]
 
 
 def format_capped_count(count: int, cap: int = API_PAGE_CAP) -> str:
@@ -84,6 +212,7 @@ class MetricsService:
       - Code Quality & Tooling (Max: 13)
 
     Adjusts scoring curves dynamically based on repo_type ('personal', 'library', 'enterprise').
+    Point values and thresholds come from the scoring rule constants above.
     """
 
     def calculate_documentation_score(
@@ -112,7 +241,7 @@ class MetricsService:
                 has_license = True
             elif item_type == "file" and name.startswith("contributing"):
                 has_contributing = True
-            elif item_type == "dir" and name in ["docs", "doc"]:
+            elif item_type == "dir" and name in DOCS_DIR_NAMES:
                 has_docs_dir = True
 
         if has_readme:
@@ -121,21 +250,21 @@ class MetricsService:
             weaknesses.append("Missing README file in root directory.")
             suggestions.append("Add a README.md file in the root.")
 
-        if repo_type == "personal":
+        if repo_type == RepoType.PERSONAL:
             if has_readme:
-                score += 15
+                score += PERSONAL_README_POINTS
         else:
             if has_readme:
-                score += 7
+                score += README_POINTS
             if has_license:
-                score += 4
+                score += LICENSE_POINTS
                 strengths.append("Found LICENSE permissions file.")
             else:
                 weaknesses.append("Missing LICENSE file.")
                 suggestions.append("Add a LICENSE file.")
 
             if has_contributing or has_docs_dir:
-                score += 4
+                score += CONTRIBUTING_OR_DOCS_POINTS
                 strengths.append("Found documentation/contributing guidelines.")
             else:
                 weaknesses.append("Missing CONTRIBUTING guide or docs folder.")
@@ -157,19 +286,20 @@ class MetricsService:
         weaknesses = []
         suggestions = []
 
+        busy, steady, occasional = COMMIT_BANDS
         commit_count = len(recent_commits)
-        if commit_count >= 10:
-            score += 8
+        if commit_count >= busy.limit:
+            score += busy.points
             strengths.append(
                 f"High commit activity: {format_capped_count(commit_count)} commits in the last 30 days."
             )
-        elif commit_count >= 3:
-            score += 4
+        elif commit_count >= steady.limit:
+            score += steady.points
             strengths.append(
                 f"Moderate commit activity: {commit_count} commits in the last 30 days."
             )
-        elif commit_count >= 1:
-            score += 2
+        elif commit_count >= occasional.limit:
+            score += occasional.points
             strengths.append(f"Low commit activity: {commit_count} commit(s) in the last 30 days.")
         else:
             weaknesses.append("Zero commit activity recorded in the last 30 days.")
@@ -186,16 +316,17 @@ class MetricsService:
             except Exception as e:
                 logger.error(f"Error parsing pushed_at timestamp '{pushed_at_str}': {e}")
 
-        if days_since_push <= 30:
-            score += 7
+        recent, quarter, half_year = PUSH_RECENCY_BANDS
+        if days_since_push <= recent.limit:
+            score += recent.points
             strengths.append("Repository updated recently (within the last 30 days).")
-        elif days_since_push <= 90:
-            score += 4
+        elif days_since_push <= quarter.limit:
+            score += quarter.points
             strengths.append(
                 f"Repository updated recently (last pushed {days_since_push} days ago)."
             )
-        elif days_since_push <= 180:
-            score += 2
+        elif days_since_push <= half_year.limit:
+            score += half_year.points
             weaknesses.append(
                 f"Repository is becoming inactive (last pushed {days_since_push} days ago)."
             )
@@ -221,52 +352,42 @@ class MetricsService:
         has_src = False
         has_configs = False
 
-        config_extensions = [".toml", ".ini", ".json", ".yaml", ".yml", ".txt", ".lock"]
-        config_basenames = [
-            "setup.py",
-            "makefile",
-            "dockerfile",
-            "gemfile",
-            "go.mod",
-            "cargo.toml",
-        ]
-
         for item in root_contents:
             name = item.get("name", "").lower()
             item_type = item.get("type", "")
 
-            if item_type == "dir" and name in ["tests", "test", "spec", "testing"]:
+            if item_type == "dir" and name in TEST_DIR_NAMES:
                 has_tests = True
-            elif item_type == "dir" and name in ["src", "app", "lib", "sources", "pkg"]:
+            elif item_type == "dir" and name in SOURCE_DIR_NAMES:
                 has_src = True
             elif item_type == "file" and (
                 name.startswith(".")
-                or name in config_basenames
-                or any(name.endswith(ext) for ext in config_extensions)
+                or name in CONFIG_FILE_NAMES
+                or name.endswith(CONFIG_FILE_EXTENSIONS)
             ):
                 has_configs = True
 
-        if repo_type == "personal":
+        if repo_type == RepoType.PERSONAL:
             if has_src:
-                score += 8
+                score += PERSONAL_SOURCE_DIR_POINTS
             if has_configs:
-                score += 7
+                score += PERSONAL_CONFIG_FILES_POINTS
         else:
             if has_tests:
-                score += 6
+                score += TESTS_DIR_POINTS
                 strengths.append("Found dedicated test suite directory.")
             else:
                 weaknesses.append("Missing test suite folder.")
                 suggestions.append("Create a tests/ directory.")
 
             if has_src:
-                score += 5
+                score += SOURCE_DIR_POINTS
                 strengths.append("Source code organized into a dedicated subdirectory.")
             else:
                 weaknesses.append("Missing standard source code folder.")
 
             if has_configs:
-                score += 4
+                score += CONFIG_FILES_POINTS
                 strengths.append("Found workspace configuration files.")
             else:
                 weaknesses.append("Missing standard environment configuration files.")
@@ -284,40 +405,43 @@ class MetricsService:
         weaknesses = []
         suggestions = []
 
-        if repo_type in ["personal", "enterprise"]:
-            score = 15
+        if repo_type in COMMUNITY_WAIVED_PROFILES:
+            score = DIMENSION_MAX_POINTS["community"]
             strengths.append("Community metrics bypassed for Personal/Enterprise profile.")
             return score, strengths, weaknesses, suggestions
 
         stars = metadata.get("stargazers_count", 0) or 0
         forks = metadata.get("forks_count", 0) or 0
 
-        if stars >= 50:
-            score += 5
+        many_stars, some_stars = STAR_BANDS
+        if stars >= many_stars.limit:
+            score += many_stars.points
             strengths.append(f"Strong community interest with {stars:,} stars.")
-        elif stars >= 10:
-            score += 3
+        elif stars >= some_stars.limit:
+            score += some_stars.points
             strengths.append(f"Growing community interest with {stars} stars.")
         else:
             weaknesses.append(f"Low community visibility with {stars} star(s).")
             suggestions.append("Promote your repository on developer communities.")
 
-        if forks >= 20:
-            score += 5
+        many_forks, some_forks = FORK_BANDS
+        if forks >= many_forks.limit:
+            score += many_forks.points
             strengths.append(f"High fork count ({forks:,}).")
-        elif forks >= 5:
-            score += 3
+        elif forks >= some_forks.limit:
+            score += some_forks.points
             strengths.append(f"Moderate fork activity ({forks} forks).")
         else:
             weaknesses.append(f"Low fork count ({forks}).")
 
-        if contributor_count >= 5:
-            score += 5
+        many_contributors, some_contributors = CONTRIBUTOR_BANDS
+        if contributor_count >= many_contributors.limit:
+            score += many_contributors.points
             strengths.append(
                 f"Active contributor base with {format_capped_count(contributor_count)} contributors."
             )
-        elif contributor_count >= 2:
-            score += 3
+        elif contributor_count >= some_contributors.limit:
+            score += some_contributors.points
             strengths.append(f"Small active contributor group ({contributor_count} contributors).")
         else:
             weaknesses.append("Only a single contributor.")
@@ -341,31 +465,33 @@ class MetricsService:
 
         has_workflows = len(workflow_contents) > 0
         if has_workflows:
-            score += 7
+            score += WORKFLOW_POINTS
             strengths.append(f"Found {len(workflow_contents)} GitHub Actions workflow(s).")
         else:
-            if repo_type == "personal":
-                score += 7
+            if repo_type == RepoType.PERSONAL:
+                score += WORKFLOW_POINTS
             else:
                 weaknesses.append("No GitHub Actions workflows detected.")
                 suggestions.append("Add a GitHub Actions workflow.")
 
+        no_issues, few_issues = OPEN_ISSUE_BANDS
         open_issues = metadata.get("open_issues_count", 0) or 0
-        if open_issues == 0:
-            score += 4
+        if open_issues <= no_issues.limit:
+            score += no_issues.points
             strengths.append("Zero open issues.")
-        elif open_issues <= 10:
-            score += 2
+        elif open_issues <= few_issues.limit:
+            score += few_issues.points
             strengths.append(f"Manageable open issue count ({open_issues} issues).")
         else:
             weaknesses.append(f"High open issue count ({open_issues:,}).")
 
+        lean, moderate = REPO_SIZE_BANDS_KB
         repo_size_kb = metadata.get("size", 0) or 0
-        if repo_size_kb <= 50000:
-            score += 4
+        if repo_size_kb <= lean.limit:
+            score += lean.points
             strengths.append("Repository size is lean and well-managed.")
-        elif repo_size_kb <= 200000:
-            score += 2
+        elif repo_size_kb <= moderate.limit:
+            score += moderate.points
             strengths.append("Repository size is moderate.")
         else:
             weaknesses.append(f"Repository is large ({repo_size_kb // 1024}MB).")
@@ -389,18 +515,6 @@ class MetricsService:
         has_gitignore = False
         has_lockfile = False
 
-        lockfile_names = [
-            "requirements.txt",
-            "poetry.lock",
-            "pipfile.lock",
-            "package-lock.json",
-            "yarn.lock",
-            "pnpm-lock.yaml",
-            "cargo.lock",
-            "go.sum",
-            "gemfile.lock",
-        ]
-
         for item in root_contents:
             name = item.get("name", "").lower()
             item_type = item.get("type", "")
@@ -408,22 +522,22 @@ class MetricsService:
             if item_type == "file":
                 if name.startswith("security"):
                     has_security_md = True
-                elif name in [".env.example", ".env.sample", ".env.template"]:
+                elif name in ENV_TEMPLATE_NAMES:
                     has_env_example = True
                 elif name == ".gitignore":
                     has_gitignore = True
-                elif name in lockfile_names:
+                elif name in LOCKFILE_NAMES:
                     has_lockfile = True
 
         if has_gitignore:
-            score += 3
+            score += GITIGNORE_POINTS
             strengths.append("Found .gitignore secret protection file.")
         else:
             weaknesses.append("Missing .gitignore file (risk of committing secrets).")
             suggestions.append("Add a .gitignore file to prevent checking in credentials.")
 
         if has_lockfile:
-            score += 4
+            score += LOCKFILE_POINTS
             strengths.append("Found dependency lockfile for deterministic builds.")
         else:
             weaknesses.append(
@@ -432,15 +546,15 @@ class MetricsService:
             suggestions.append("Commit a dependency lockfile for reproducible deployments.")
 
         if has_env_example:
-            score += 2
+            score += ENV_TEMPLATE_POINTS
             strengths.append("Found environment variable template (.env.example).")
 
         if has_security_md:
-            score += 3
+            score += SECURITY_POLICY_POINTS
             strengths.append("Found explicit SECURITY.md policy.")
         else:
-            if repo_type == "personal":
-                score += 3
+            if repo_type == RepoType.PERSONAL:
+                score += SECURITY_POLICY_POINTS
             else:
                 weaknesses.append("Missing SECURITY.md vulnerability reporting policy.")
                 suggestions.append("Add a SECURITY.md file detailing security issue reporting.")
@@ -462,35 +576,20 @@ class MetricsService:
         has_type_config = False
         has_pre_commit = False
 
-        linter_names = [
-            "pyproject.toml",
-            "ruff.toml",
-            ".ruff.toml",
-            ".flake8",
-            ".eslintrc",
-            ".eslintrc.js",
-            ".eslintrc.json",
-            "biome.json",
-            ".prettierrc",
-        ]
-        type_names = ["mypy.ini", ".mypy.ini", "tsconfig.json"]
-
         for item in root_contents:
             name = item.get("name", "").lower()
             item_type = item.get("type", "")
 
             if item_type == "file":
-                if name in linter_names or any(
-                    name.startswith(prefix) for prefix in [".eslintrc", ".prettierrc"]
-                ):
+                if name in LINTER_CONFIG_NAMES or name.startswith(LINTER_CONFIG_PREFIXES):
                     has_linter_config = True
-                elif name in type_names:
+                elif name in TYPE_CHECKER_CONFIG_NAMES:
                     has_type_config = True
-                elif name in [".pre-commit-config.yaml", ".pre-commit-config.yml"]:
+                elif name in PRE_COMMIT_CONFIG_NAMES:
                     has_pre_commit = True
 
         if has_linter_config:
-            score += 5
+            score += LINTER_CONFIG_POINTS
             strengths.append(
                 "Found linter/formatter configuration (Ruff/ESLint/Prettier/pyproject.toml)."
             )
@@ -501,11 +600,11 @@ class MetricsService:
             )
 
         if has_type_config:
-            score += 4
+            score += TYPE_CHECKER_POINTS
             strengths.append("Found static type checking configuration (mypy / tsconfig).")
         else:
-            if repo_type == "personal":
-                score += 4
+            if repo_type == RepoType.PERSONAL:
+                score += TYPE_CHECKER_POINTS
             else:
                 weaknesses.append("Missing explicit static type checker configuration.")
                 suggestions.append(
@@ -513,11 +612,11 @@ class MetricsService:
                 )
 
         if has_pre_commit:
-            score += 4
+            score += PRE_COMMIT_POINTS
             strengths.append("Found .pre-commit-config.yaml git hooks automation.")
         else:
-            if repo_type == "personal":
-                score += 4
+            if repo_type == RepoType.PERSONAL:
+                score += PRE_COMMIT_POINTS
             else:
                 weaknesses.append("No pre-commit git hooks detected.")
                 suggestions.append(
@@ -530,20 +629,7 @@ class MetricsService:
         """
         Maps numeric score (0-100) to a letter grade: A+, A, B+, B, C, D, or F.
         """
-        if overall_score >= 95:
-            return "A+"
-        elif overall_score >= 85:
-            return "A"
-        elif overall_score >= 75:
-            return "B+"
-        elif overall_score >= 65:
-            return "B"
-        elif overall_score >= 50:
-            return "C"
-        elif overall_score >= 35:
-            return "D"
-        else:
-            return "F"
+        return grade_for_score(overall_score)
 
     def generate_executive_summary(
         self,

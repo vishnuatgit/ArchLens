@@ -1,12 +1,14 @@
+{% import "_ui.html" as ui %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}ArchLens &mdash; Repository Intelligence{% endblock %}</title>
-    <meta name="description" content="{% block meta_description %}ArchLens scores the engineering health of public GitHub repositories from 0 to 100, with strengths, concerns and next steps.{% endblock %}" />
+    <title>{% block title %}ArchLens &mdash; engineering health scores for GitHub repositories{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}ArchLens scores any public GitHub repo's engineering health out of 100 and says what to fix first.{% endblock %}" />
     <meta name="author" content="{{ site.author }}" />
     <meta name="theme-color" content="#070a12" />
+    <meta name="color-scheme" content="dark light" />
 
     <!-- Open Graph / link previews -->
     <meta property="og:type" content="website" />
@@ -18,146 +20,100 @@
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
 
     <script>
-        (function() {
-            // Storage can be unavailable (privacy modes, blocked cookies); fall back to dark
-            let savedTheme = 'dark';
-            try {
-                savedTheme = localStorage.getItem('theme') || 'dark';
-            } catch (e) {}
-            document.documentElement.setAttribute('data-theme', savedTheme);
+        // Apply the theme before the page paints: the saved choice, else the system setting.
+        // Storage can be unavailable (privacy modes, blocked cookies), so it is guarded.
+        (function () {
+            var root = document.documentElement, theme = null;
+            root.classList.add('js');
+            try { theme = localStorage.getItem('theme'); } catch (e) {}
+            if (theme !== 'light' && theme !== 'dark') {
+                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            root.setAttribute('data-theme', theme);
         })();
     </script>
 
-    <!-- Google Fonts: Plus Jakarta Sans, Inter, JetBrains Mono -->
+    <!-- Plus Jakarta Sans for headings, Inter for text, JetBrains Mono for repository names and data -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
 
-    <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="/static/css/styles.css?v=8" />
-
+    <link rel="stylesheet" href="/static/css/styles.css?v={{ asset_version }}" />
     {% block head_extra %}{% endblock %}
 </head>
 <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="ambient" aria-hidden="true"></div>
 
-    <!-- Ambient Background Lighting -->
-    <div class="bg-glow bg-glow-1"></div>
-    <div class="bg-glow bg-glow-2"></div>
-
-    <!-- Navigation Bar -->
-    <nav class="navbar" aria-label="Main">
-        <div class="nav-inner container">
+    {% set path = request.url.path %}
+    {% set nav = [
+        ("/", "Analyze", "search", path in ("/", "/analyze") or path.startswith("/analysis/")),
+        ("/compare", "Compare", "compare", path == "/compare"),
+        ("/history", "History", "clock", path == "/history"),
+        ("/scoring", "Scoring", "ruler", path == "/scoring"),
+        ("/about", "About", "info", path == "/about"),
+    ] %}
+    <header class="navbar">
+        <div class="container nav-inner">
             <a href="/" class="nav-brand" aria-label="ArchLens home">
-                <div class="brand-logo-wrap">
-                    <svg class="brand-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9" stroke="url(#brand-grad)" stroke-width="2.2" />
-                        <circle cx="12" cy="12" r="4" fill="url(#brand-grad)" />
-                        <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="url(#brand-grad)" stroke-linecap="round" />
-                        <defs>
-                            <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#818cf8" />
-                                <stop offset="50%" stop-color="#38bdf8" />
-                                <stop offset="100%" stop-color="#34d399" />
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                </div>
+                <svg class="brand-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#818cf8" />
+                            <stop offset="50%" stop-color="#38bdf8" />
+                            <stop offset="100%" stop-color="#34d399" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="12" cy="12" r="8.5" stroke="url(#brand-grad)" stroke-width="2.2" />
+                    <circle cx="12" cy="12" r="3.6" fill="url(#brand-grad)" />
+                    <path d="M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5" stroke="url(#brand-grad)" stroke-width="2" stroke-linecap="round" />
+                </svg>
                 <span class="brand-text">Arch<span class="brand-accent">Lens</span></span>
             </a>
-            <ul class="nav-links">
-                <li>
-                    <a href="/" class="nav-link {% if request.url.path in ('/', '/analyze') %}active{% endif %}" title="Analyze a repository">
-                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <circle cx="11" cy="11" r="8" />
-                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                        <span class="nav-label">Analyze</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/history" class="nav-link {% if request.url.path == '/history' %}active{% endif %}" title="Analysis history">
-                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span class="nav-label">History</span>
-                    </a>
-                </li>
-                <li>
-                    <button id="theme-toggle-btn" type="button" class="nav-link theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle colour theme" title="Toggle colour theme">
-                        <svg id="theme-sun-icon" class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;" aria-hidden="true">
-                            <circle cx="12" cy="12" r="5" />
-                            <line x1="12" y1="1" x2="12" y2="3" />
-                            <line x1="12" y1="21" x2="12" y2="23" />
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                            <line x1="1" y1="12" x2="3" y2="12" />
-                            <line x1="21" y1="12" x2="23" y2="12" />
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                        </svg>
-                        <svg id="theme-moon-icon" class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                        </svg>
-                        <span id="theme-toggle-text" class="nav-label">Theme</span>
-                    </button>
-                </li>
-            </ul>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
+            <nav class="nav-links" id="site-nav" aria-label="Main">
+                {% for href, label, icon_name, active in nav %}
+                <a href="{{ href }}" class="nav-link"{% if active %} aria-current="page"{% endif %}>{{ ui.icon(icon_name, "nav-icon") }}<span>{{ label }}</span></a>
+                {% endfor %}
+            </nav>
+
+            <div class="nav-actions">
+                <a class="icon-btn nav-source" href="{{ site.repo_url }}" rel="noopener" aria-label="Source on GitHub" data-tip="Source on GitHub" data-tip-align="end">{{ ui.icon("github") }}</a>
+                <button id="theme-toggle" type="button" class="icon-btn" aria-label="Switch to light theme" data-tip="Switch theme" data-tip-align="end">
+                    {{ ui.icon("sun", "icon icon-sun") }}{{ ui.icon("moon", "icon icon-moon") }}
+                </button>
+                <button id="nav-menu" type="button" class="icon-btn nav-menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="site-nav">
+                    {{ ui.icon("menu", "icon icon-open") }}{{ ui.icon("x", "icon icon-close") }}
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main" class="main-content" tabindex="-1">
         <div class="container">
             {% block content %}{% endblock %}
         </div>
     </main>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container footer-inner">
-            <div class="footer-brand">
-                <span class="footer-dot"></span>
-                <span class="footer-text">
-                    ArchLens &mdash; built by
-                    <a href="{{ site.portfolio_url }}" target="_blank" rel="noopener">{{ site.author }}</a>
-                </span>
-            </div>
+            <p class="footer-brand">
+                <span class="footer-dot" aria-hidden="true"></span>
+                <span><strong>ArchLens</strong> scores public GitHub repositories from their metadata. It never clones or runs code.</span>
+            </p>
             <nav class="footer-links" aria-label="Footer">
-                <a href="{{ site.portfolio_url }}" target="_blank" rel="noopener">Portfolio</a>
-                <a href="{{ site.repo_url }}" target="_blank" rel="noopener">Source on GitHub</a>
+                <a href="{{ site.repo_url }}" rel="noopener">Source on GitHub</a>
                 <a href="/docs">API docs</a>
+                <a href="/scoring">How scoring works</a>
+                <a href="{{ site.portfolio_url }}" rel="noopener">Built by {{ site.author }}</a>
             </nav>
         </div>
     </footer>
 
-    <script>
-        function syncThemeUI() {
-            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-            const sunIcon = document.getElementById('theme-sun-icon');
-            const moonIcon = document.getElementById('theme-moon-icon');
-            const text = document.getElementById('theme-toggle-text');
-            if (currentTheme === 'light') {
-                if (sunIcon) sunIcon.style.display = 'inline-block';
-                if (moonIcon) moonIcon.style.display = 'none';
-                if (text) text.textContent = 'Light Mode';
-            } else {
-                if (sunIcon) sunIcon.style.display = 'none';
-                if (moonIcon) moonIcon.style.display = 'inline-block';
-                if (text) text.textContent = 'Dark Mode';
-            }
-        }
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-            const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', nextTheme);
-            try {
-                localStorage.setItem('theme', nextTheme);
-            } catch (e) {}
-            syncThemeUI();
-        }
-        document.addEventListener('DOMContentLoaded', syncThemeUI);
-    </script>
+    <!-- Copy confirmations and other short messages; read out by screen readers -->
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
+    <script src="/static/js/site.js?v={{ asset_version }}" defer></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

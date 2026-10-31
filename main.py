@@ -13,7 +13,7 @@ from app.dependencies import get_analysis_service
 from app.exceptions import ArchLensError
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.repositories.db import SessionLocal
-from app.routers import api, web
+from app.routers import api, badge, web
 from app.services.seed_service import seed_examples_on_startup
 from app.templating import templates
 
@@ -43,11 +43,25 @@ async def lifespan(app: FastAPI):
 # Initialize the main FastAPI application
 app = FastAPI(
     title="ArchLens",
-    description="Repository Intelligence & Engineering Quality Analysis Platform",
+    description=(
+        "Scores the engineering health of public GitHub repositories from 0 to 100 "
+        "using public metadata. Web pages, this REST API and a CLI share one service layer."
+    ),
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
+    openapi_tags=[
+        {
+            "name": "Analyses",
+            "description": "Analyze a public repository. A report of the same repository and "
+            "profile from the last hour is reused, and each client can start a limited number "
+            "of new analyses.",
+        },
+        {"name": "Reports", "description": "Stored reports as JSON or Markdown."},
+        {"name": "Badges", "description": "README badges from stored reports. Never calls GitHub."},
+        {"name": "System", "description": "Health checks."},
+    ],
 )
 
 # Register custom logging and timing middleware
@@ -59,6 +73,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Register Web and REST API routers
 app.include_router(web.router)
 app.include_router(api.router)
+app.include_router(badge.router)
 
 
 def is_api_request(request: Request) -> bool:

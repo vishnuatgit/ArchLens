@@ -1,153 +1,146 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui %}
 
-{% block title %}Analysis History &mdash; ArchLens{% endblock %}
-{% block meta_description %}Browse all previous repository analyses run through ArchLens, sorted by most recent.{% endblock %}
+{% block title %}History &mdash; ArchLens{% endblock %}
+{% block meta_description %}Every repository analysis run through ArchLens, filterable by repository and profile.{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/static/css/history.css?v=3" />
+<link rel="stylesheet" href="/static/css/history.css?v={{ asset_version }}" />
 {% endblock %}
 
 {% block content %}
 
-<div class="page-header" style="text-align: left;">
-    <div class="history-title-wrap">
-        <svg class="history-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <h1>Analysis History</h1>
+<header class="page-header">
+    <div class="page-title-wrap">
+        <span class="page-title-icon">{{ ui.icon("clock") }}</span>
+        <h1>Analysis history</h1>
     </div>
-    <p class="text-secondary">Every completed repository scan, most recent first.</p>
-</div>
+    <p>Every stored report, searchable and sortable. Example reports are marked and keep the date they were captured.</p>
+</header>
+
+{% if stored_total %}
+<form class="history-toolbar" method="GET" action="/history" role="search" data-autosubmit>
+    <div class="input-wrap history-search-wrap">
+        {{ ui.icon("search", "input-icon") }}
+        <label class="visually-hidden" for="history-search">Filter by repository</label>
+        <input id="history-search" class="input input-with-icon mono" type="search" name="q" value="{{ q }}"
+               placeholder="Filter by owner/repo" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <kbd class="input-kbd" aria-hidden="true">/</kbd>
+    </div>
+    <div class="history-selects">
+        <label class="visually-hidden" for="history-profile">Profile</label>
+        <select id="history-profile" class="select select-sm" name="profile">
+            <option value="">All profiles</option>
+            {% for value, label in profiles.items() %}
+            <option value="{{ value }}" {% if profile == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <label class="visually-hidden" for="history-sort">Sort</label>
+        <select id="history-sort" class="select select-sm" name="sort">
+            {% for value, label in sort_options.items() %}
+            <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm">Apply</button>
+    </div>
+</form>
+
+<p class="history-count" id="history-count" aria-live="polite">
+    {% if filtered %}
+    <span class="mono">{{ total }}</span> of <span class="mono">{{ stored_total }}</span> reports match.
+    <a href="/history">Clear filters</a>
+    {% else %}
+    <span class="mono">{{ stored_total }}</span> {{ "report" if stored_total == 1 else "reports" }} stored.
+    {% endif %}
+</p>
 
 {% if analyses %}
-<div class="history-filter-bar mb-4">
-    <div class="search-input-wrap">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input id="history-search" class="form-input search-input" type="text" placeholder="Filter by repository name..." aria-label="Filter by repository name" oninput="filterHistory()" />
-    </div>
-</div>
-
 <div class="card history-card">
-    <div class="history-table-header" aria-hidden="true">
-        <span class="th">Repository &amp; Profile</span>
-        <span class="th">Score</span>
-        <span class="th th-hide">Duration</span>
-        <span class="th th-hide">Analyzed</span>
-        <span class="th"></span>
-    </div>
-
-    <ul class="history-list" id="history-list">
-        {% for item in analyses %}
-        <li class="history-item">
-            <a href="/analysis/{{ item.id }}" class="history-row">
-                <div class="history-repo">
-                    <div class="history-repo-top">
-                        <span class="history-repo-name mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
-                        <span class="profile-badge-sm profile-{{ item.repo_type }}">{{ item.repo_type }}</span>
-                        {% if item.is_example %}<span class="example-tag">Example</span>{% endif %}
-                    </div>
-                    <span class="history-repo-url text-muted text-xs">{{ item.repository.url }}</span>
-                </div>
-
-                <div class="history-score">
-                    <span class="score-badge score-{{ score_tier(item.score).key }}">{{ item.score }}</span>
-                </div>
-
-                <div class="history-duration th-hide">
-                    <span class="text-sm text-secondary mono">{{ "%.2f"|format(item.duration) }}s</span>
-                </div>
-
-                <div class="history-date th-hide">
-                    <span class="text-sm text-secondary">{{ item.created_at.strftime("%b %d, %Y") }}</span>
-                    <span class="text-xs text-muted">{{ item.created_at.strftime("%H:%M UTC") }}</span>
-                </div>
-
-                <div class="history-action" aria-hidden="true">
-                    <svg class="history-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                </div>
-            </a>
-        </li>
-        {% endfor %}
-    </ul>
+    <table class="table table-sticky history-table">
+        <thead>
+            <tr>
+                <th scope="col">Repository</th>
+                <th scope="col">Grade</th>
+                <th scope="col" class="col-score">Score</th>
+                <th scope="col" class="hide-sm">Analyzed</th>
+                <th scope="col" class="hide-sm num">Took</th>
+                <th scope="col" class="col-chevron"><span class="visually-hidden">Open</span></th>
+            </tr>
+        </thead>
+        <tbody id="history-list">
+            {% for item in analyses %}
+            {% set item_tier = score_tier(item.score) %}
+            {% set grade = (item.metrics.health_grade if item.metrics else none) or grade_for(item.score) %}
+            <tr class="history-item" data-repo="{{ item.repository.owner|lower }}/{{ item.repository.name|lower }}">
+                <td>
+                    <a href="/analysis/{{ item.id }}" class="history-row">
+                        <span class="mono history-name">{{ item.repository.owner }}/{{ item.repository.name }}</span>
+                        <span class="history-tags">
+                            <span class="tag tag-profile">{{ item.repo_type }}</span>
+                            {% if item.is_example %}<span class="tag tag-example">Example</span>{% endif %}
+                            <span class="history-url hide-sm">{{ item.repository.url }}</span>
+                            {# Phones hide the Analyzed column, so the time moves under the name #}
+                            <time class="history-when-sm" datetime="{{ item.created_at.isoformat() }}Z" data-relative>{{ item.created_at.strftime("%b %d, %Y") }}</time>
+                        </span>
+                    </a>
+                </td>
+                <td>{{ ui.grade_badge(grade, "sm") }}</td>
+                <td class="col-score">
+                    <span class="score-cell">
+                        <span class="mono score-num">{{ item.score }}</span>
+                        <span class="bar"><span class="bar-fill bar-{{ item_tier.key }}" style="--w: {{ item.score }}%"></span></span>
+                    </span>
+                </td>
+                <td class="hide-sm">
+                    {# The date and UTC time as in the first design, with how long ago underneath #}
+                    <span class="history-when">
+                        <time class="history-date" datetime="{{ item.created_at.isoformat() }}Z">{{ item.created_at.strftime("%b %d, %Y") }}</time>
+                        <span class="history-time"><span class="mono">{{ item.created_at.strftime("%H:%M") }}</span> UTC<time class="history-ago" datetime="{{ item.created_at.isoformat() }}Z" data-relative></time></span>
+                    </span>
+                </td>
+                <td class="hide-sm num mono small muted">{{ "%.2f"|format(item.duration) }} s</td>
+                <td class="col-chevron">{{ ui.icon("chevron-right", "icon history-chevron") }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="filter-empty" id="filter-empty" hidden>No report on this page matches. Press Enter to search every stored report.</p>
 </div>
 
 {% if total > limit %}
-<div class="pagination">
+<nav class="pagination" aria-label="Pages">
     {% if offset > 0 %}
-    <a href="/history?offset={{ [offset - limit, 0]|max }}&limit={{ limit }}" class="btn btn-secondary btn-sm">
-        <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6" />
-        </svg>
-        <span>Previous</span>
-    </a>
+    <a href="/history?offset={{ [offset - limit, 0]|max }}&amp;limit={{ limit }}{{ page_query }}" class="btn btn-sm">{{ ui.icon("chevron-left") }}Previous</a>
     {% endif %}
-
-    <span class="pagination-info text-secondary text-sm font-semibold">
-        Showing {{ offset + 1 }}&ndash;{{ [offset + limit, total]|min }} of {{ total }}
-    </span>
-
+    <span class="pagination-info"><span class="mono">{{ offset + 1 }}&ndash;{{ [offset + limit, total]|min }}</span> of <span class="mono">{{ total }}</span></span>
     {% if offset + limit < total %}
-    <a href="/history?offset={{ offset + limit }}&limit={{ limit }}" class="btn btn-secondary btn-sm">
-        <span>Next</span>
-        <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6" />
-        </svg>
-    </a>
+    <a href="/history?offset={{ offset + limit }}&amp;limit={{ limit }}{{ page_query }}" class="btn btn-sm">Next{{ ui.icon("chevron-right") }}</a>
     {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <span class="empty-icon">{{ ui.icon("search") }}</span>
+        <p class="empty-title">No reports match</p>
+        <p>Nothing stored matches{% if q %} &ldquo;<span class="mono">{{ q }}</span>&rdquo;{% endif %}{% if profile %} under the {{ profiles[profile]|lower }} profile{% endif %}.</p>
+        <div class="btn-row">
+            <a class="btn btn-sm" href="/history">Clear filters</a>
+            {% if q %}<a class="btn btn-sm btn-primary" href="/">{{ ui.icon("search") }}Analyze a repository</a>{% endif %}
+        </div>
+    </div>
 </div>
 {% endif %}
 
 {% else %}
-<div class="empty-state">
-    <div class="empty-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+<div class="card">
+    <div class="empty-state">
+        <span class="empty-icon">{{ ui.icon("clock") }}</span>
+        <p class="empty-title">No analyses yet</p>
+        <p>Run the first one from the <a href="/">Analyze</a> page.</p>
     </div>
-    <p class="empty-title">No analyses yet</p>
-    <p class="text-secondary text-sm">Run your first repository scan from the <a href="/">Analyze</a> page.</p>
 </div>
 {% endif %}
 
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function filterHistory() {
-        const input = document.getElementById('history-search');
-        const filter = input.value.toLowerCase();
-        const items = document.querySelectorAll('.history-item');
-        let visibleCount = 0;
-
-        items.forEach(item => {
-            const text = item.textContent.toLowerCase();
-            if (text.includes(filter)) {
-                item.style.display = '';
-                visibleCount++;
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        let emptyMsg = document.getElementById('filter-empty-msg');
-        if (visibleCount === 0) {
-            if (!emptyMsg) {
-                emptyMsg = document.createElement('div');
-                emptyMsg.id = 'filter-empty-msg';
-                emptyMsg.className = 'empty-state';
-                emptyMsg.style.padding = 'var(--space-8) 0';
-                emptyMsg.innerHTML = '<p class="text-secondary" style="margin: 0; font-size: 0.95rem;">No matching repositories found.</p>';
-                document.getElementById('history-list').after(emptyMsg);
-            }
-            emptyMsg.style.display = 'block';
-        } else if (emptyMsg) {
-            emptyMsg.style.display = 'none';
-        }
-    }
-</script>
 {% endblock %}

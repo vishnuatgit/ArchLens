@@ -77,4 +77,5 @@ def test_get_analysis_by_id(repo_service):
 def test_get_history(repo_service):
     db = MagicMock()
     repo_service.get_history(db, 10, 0)
-    db.query().order_by().offset().limit().all.assert_called_once()
+    # The history joins repositories so it can filter and sort by name
+    db.query().join().order_by().offset().limit().all.assert_called_once()

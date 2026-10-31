@@ -25,6 +25,27 @@ class Repository(Base):
 
     # Establish one-to-many relationship with analysis records
     analyses = relationship("Analysis", back_populates="repository", cascade="all, delete-orphan")
+    aliases = relationship(
+        "RepositoryAlias", back_populates="repository", cascade="all, delete-orphan"
+    )
+
+
+class RepositoryAlias(Base):
+    """
+    An earlier address of a renamed or transferred repository. GitHub redirects the old
+    name; recording it lets reuse, permalinks and badges find the report under the new name.
+    """
+
+    __tablename__ = "repository_aliases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    repository_id = Column(
+        Integer, ForeignKey("repositories.id", ondelete="CASCADE"), nullable=False
+    )
+    url = Column(String, unique=True, index=True, nullable=False)
+    created_at = Column(DateTime, default=utc_now_naive, nullable=False)
+
+    repository = relationship("Repository", back_populates="aliases")
 
 
 class Analysis(Base):

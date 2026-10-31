@@ -1,339 +1,291 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui %}
 
-{% block title %}ArchLens &mdash; Repository Health Scoring{% endblock %}
-{% block meta_description %}ArchLens analyzes any public GitHub repository and scores its engineering health from 0 to 100 across documentation, activity, organization, community, maintainability, security and code quality.{% endblock %}
+{% block title %}ArchLens &mdash; engineering health scores for GitHub repositories{% endblock %}
+{% block meta_description %}ArchLens scores any public GitHub repo's engineering health out of 100 across seven dimensions and says what to fix first.{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/static/css/home.css?v=4" />
+<link rel="stylesheet" href="/static/css/home.css?v={{ asset_version }}" />
 {% endblock %}
 
 {% block content %}
 
-{% set dimension_labels = [
-    ("documentation", "Documentation"),
-    ("activity", "Activity"),
-    ("organization", "Organization"),
-    ("community", "Community"),
-    ("maintainability", "Maintainability"),
-    ("security", "Security"),
-    ("code_quality", "Code Quality")
-] %}
+<section class="hero" aria-labelledby="hero-title">
+    <div class="hero-main">
+        <h1 id="hero-title" class="hero-title">How healthy is your codebase?</h1>
+        <p class="hero-lede">ArchLens scores any public GitHub repo&rsquo;s engineering health out of 100 and says what to fix first.</p>
 
-<!-- Hero Section -->
-<section class="hero hero-two-column">
-    <div class="hero-content-left">
-        <div class="hero-badge">
-            <span class="hero-badge-dot"></span>
-            <span class="hero-badge-text">Repository Intelligence Engine</span>
-        </div>
-        <h1 class="hero-title">How resilient is your <span class="gradient-text">codebase?</span></h1>
-        <p class="hero-subtitle">
-            Paste a public GitHub repository to get a 0&ndash;100 engineering health score across seven dimensions, from documentation and release activity to security and code-quality tooling, with concrete next steps.
-        </p>
-
-        <!-- Analysis Form -->
-        <form id="analyze-form" class="analyze-card" method="POST" action="/analyze">
-            <!-- Repo URL Input (full width) -->
-            <div class="form-group">
-                <label class="form-label" for="repo-url">GitHub repository</label>
-                <div class="form-input-wrap">
-                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-                    </svg>
+        <form id="analyze-form" class="card analyze-card" method="POST" action="/analyze" novalidate
+              data-stream="/api/v1/analyze/stream" data-busy-label="Analyzing…"{% if autostart %} data-autostart{% endif %}>
+            <div class="field">
+                <label class="field-label" for="repo-url">GitHub repository</label>
+                <div class="input-wrap">
+                    {{ ui.icon("github", "input-icon") }}
                     <input
                         id="repo-url"
-                        class="form-input form-input-with-icon"
+                        class="input input-with-icon input-repo mono"
                         type="text"
                         name="url"
                         value="{{ form_url }}"
-                        placeholder="owner/repo or GitHub URL"
+                        placeholder="owner/repo or a github.com URL"
                         required
                         autocomplete="off"
                         autocapitalize="off"
                         spellcheck="false"
                         inputmode="url"
-                        {% if error %}aria-invalid="true" aria-describedby="form-error"{% endif %}
+                        data-validate-repo
+                        {% if field_invalid %}aria-invalid="true" aria-describedby="form-error"{% endif %}
                     />
+                    <kbd class="input-kbd" aria-hidden="true">/</kbd>
                 </div>
+                <p class="field-error" id="repo-error" hidden>{{ ui.icon("alert-circle") }}<span></span></p>
             </div>
 
-            <!-- One-click examples -->
-            <div class="example-chips">
-                <span class="example-chips-label">Try</span>
+            <div class="chips">
+                <span class="chips-label">Try</span>
                 {% for repo in example_repos %}
-                <button type="button" class="example-chip mono" data-repo="{{ repo }}">{{ repo }}</button>
+                <button type="button" class="chip example-chip" data-repo="{{ repo }}" data-fill="{{ repo }}" data-fill-target="#repo-url">{{ repo }}</button>
                 {% endfor %}
             </div>
 
-            <div class="form-row">
-                <!-- Profile Selector -->
-                <div class="form-group form-group-profile">
-                    <label class="form-label" for="repo-type">Profile</label>
-                    <div class="form-input-wrap">
-                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                            <polyline points="2 17 12 22 22 17" />
-                            <polyline points="2 12 12 17 22 12" />
-                        </svg>
-                        <select id="repo-type" name="repo_type" class="form-input form-input-with-icon">
-                            {% for value, label in [("library", "Open Source Library"), ("personal", "Personal Project"), ("enterprise", "Enterprise App")] %}
+            <div class="analyze-row">
+                <div class="field field-profile">
+                    <label class="field-label" for="repo-type">
+                        Profile
+                        <a class="field-help" href="/scoring" data-tip="What each profile changes">{{ ui.icon("help", "icon") }}<span class="visually-hidden">What the profiles change</span></a>
+                    </label>
+                    <div class="input-wrap">
+                        {{ ui.icon("layers", "input-icon") }}
+                        <select id="repo-type" name="repo_type" class="select select-with-icon">
+                            {% for value, label in profiles.items() %}
                             <option value="{{ value }}" {% if form_repo_type == value %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
-
-                <!-- Submit Button -->
-                <div class="form-btn-wrap">
-                    <button id="analyze-btn" class="btn btn-primary btn-lg" type="submit">
-                        <span id="btn-label">Analyze Repo</span>
-                        <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                            <polyline points="12 5 19 12 12 19" />
-                        </svg>
-                        <span class="spinner" id="btn-spinner"></span>
-                    </button>
-                </div>
+                <button id="analyze-btn" class="btn btn-primary btn-lg analyze-btn" type="submit">
+                    <span class="btn-label">Analyze repo</span>
+                    {{ ui.icon("arrow-right", "icon btn-icon") }}{{ ui.spinner() }}
+                </button>
             </div>
 
-            <p id="form-progress" class="form-progress" role="status" aria-live="polite"></p>
+            <p class="form-footnote">
+                {{ ui.icon("info", "icon") }}
+                <span>Public repositories only. Asking again within {{ cache_minutes }} minutes reuses the stored report, and each visitor can start {{ rate_limit }} new {{ "analysis" if rate_limit == 1 else "analyses" }} per {{ rate_window_minutes }} minutes.</span>
+            </p>
 
             {% if error %}
-            <div class="alert alert-error mt-4" id="form-error" role="alert">
-                <svg style="width: 18px; height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <span>{{ error }}</span>
+            <div class="alert" id="form-error" role="alert">
+                {{ ui.icon("alert-circle") }}
+                <div class="alert-body">
+                    <span><strong>Not analyzed.</strong> {{ error }}</span>
+                </div>
             </div>
             {% endif %}
+            <div class="alert" id="stream-error" role="alert" hidden>
+                {{ ui.icon("alert-circle") }}
+                <div class="alert-body">
+                    <span><strong>Not analyzed.</strong> <span data-error-message></span></span>
+                    <div class="alert-actions">
+                        <button type="submit" class="btn btn-sm">{{ ui.icon("refresh") }}Try again</button>
+                        <a class="btn btn-sm btn-ghost" href="/history">Browse stored reports</a>
+                    </div>
+                </div>
+            </div>
         </form>
 
-        <!-- Dimension Pill Badges -->
-        <div class="dimension-tags">
-            <span class="dim-tag"><span class="dim-dot dim-doc"></span> Documentation</span>
-            <span class="dim-tag"><span class="dim-dot dim-act"></span> Activity</span>
-            <span class="dim-tag"><span class="dim-dot dim-org"></span> Organization</span>
-            <span class="dim-tag"><span class="dim-dot dim-com"></span> Community</span>
-            <span class="dim-tag"><span class="dim-dot dim-mnt"></span> Maintainability</span>
-            <span class="dim-tag"><span class="dim-dot dim-sec"></span> Security</span>
-            <span class="dim-tag"><span class="dim-dot dim-qlty"></span> Code Quality</span>
-        </div>
-    </div>
-
-    <div class="hero-content-right">
-        <div class="glass-showcase">
-            <div class="glass-blob glass-blob-1"></div>
-            <div class="glass-blob glass-blob-2"></div>
-
-            {% if featured %}
-            {% set featured_tier = score_tier(featured.score) %}
-            <!-- Preview of a stored report (an example report when one is loaded) -->
-            <a href="/analysis/{{ featured.id }}" class="glass-card main-glass-card preview-card floating" id="featured-report">
-                <div class="glass-card-header">
-                    <div class="glass-card-dots">
-                        <span></span><span></span><span></span>
-                    </div>
-                    <div class="glass-card-title">{% if featured.is_example %}Example report{% else %}Latest report{% endif %}</div>
-                </div>
-
-                <div class="preview-repo">
-                    <span class="preview-repo-name mono">{{ featured.repository.owner }}/{{ featured.repository.name }}</span>
-                    <span class="preview-date">Analyzed {{ featured.created_at.strftime("%b %d, %Y") }} &bull; {{ featured.repo_type|capitalize }} profile</span>
-                </div>
-
-                <div class="preview-score-row">
-                    <div class="preview-score">
-                        <span class="preview-score-num gauge-{{ featured_tier.key }}">{{ featured.score }}</span>
-                        <span class="preview-score-total mono">/100</span>
-                    </div>
-                    <div class="preview-score-meta">
-                        {% if featured.metrics and featured.metrics.health_grade %}
-                        <span class="preview-grade">Grade {{ featured.metrics.health_grade }}</span>
-                        {% endif %}
-                        <span class="score-badge score-{{ featured_tier.key }} preview-tier">{{ featured_tier.label }}</span>
-                    </div>
-                </div>
-
-                <ul class="preview-bars">
-                    {% for key, label in dimension_labels %}
-                    {% set val = featured_breakdown.get(key, 0) %}
-                    <li class="preview-bar-row">
-                        <span class="preview-bar-label">{{ label }}</span>
-                        <span class="preview-bar-track"><span class="preview-bar-fill bar-{{ score_tier(val / max_points[key] * 100).key }}" style="width: {{ (val / max_points[key] * 100)|int }}%;"></span></span>
-                        <span class="preview-bar-val mono">{{ val }}/{{ max_points[key] }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-
-                <span class="preview-cta">
-                    Open the full report
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                        <polyline points="12 5 19 12 12 19" />
-                    </svg>
-                </span>
-            </a>
-            {% else %}
-            <!-- No reports stored yet: explain the pipeline instead of showing made-up numbers -->
-            <div class="glass-card main-glass-card how-card">
-                <div class="glass-card-header">
-                    <div class="glass-card-dots">
-                        <span></span><span></span><span></span>
-                    </div>
-                    <div class="glass-card-title">How it works</div>
-                </div>
-                <ol class="how-steps">
-                    <li><strong>Fetch</strong> repository metadata, languages, contributors, recent commits and workflow files from the GitHub API, concurrently.</li>
-                    <li><strong>Score</strong> seven dimensions against the selected profile and combine them into a 0&ndash;100 score and grade.</li>
-                    <li><strong>Report</strong> strengths, concerns and next steps, saved so you can revisit them.</li>
-                </ol>
+        <!-- How it works: the same four steps light up while an analysis runs -->
+        <section class="pipeline" id="pipeline" aria-labelledby="pipeline-title" data-state="idle">
+            <div class="pipeline-head">
+                <h2 id="pipeline-title" class="pipeline-title">How it works</h2>
+                <p class="pipeline-status" id="pipeline-status" role="status" aria-live="polite">Four steps, usually done in a second or two.</p>
             </div>
-            {% endif %}
-        </div>
-    </div>
-</section>
-
-<!-- Privacy Section -->
-<section class="security-section">
-    <div class="security-container">
-        <div class="security-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-        </div>
-        <div class="security-content">
-            <h3>Read-only by design</h3>
-            <p>
-                ArchLens reads public metadata through the GitHub REST API: repository stats, the root file listing, languages, contributors, recent commits and workflow file names.
-                It <strong>never</strong> clones the repository or downloads source files, and it stores only the resulting scores and findings.
-            </p>
-        </div>
-    </div>
-</section>
-
-<hr class="divider" />
-
-<!-- Recent Scans Section -->
-{% if recent_analyses %}
-<section class="recent-section">
-    <div class="section-header">
-        <div class="section-header-left">
-            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-            <h2 class="section-title">Recent Scans</h2>
-        </div>
-        <a href="/history" class="btn btn-secondary btn-sm">
-            <span>View All</span>
-            <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <polyline points="9 18 15 12 9 6" />
-            </svg>
-        </a>
-    </div>
-
-    <ul class="scan-list" id="recent-scan-list">
-        {% for item in recent_analyses %}
-        <li class="scan-item">
-            <a href="/analysis/{{ item.id }}" class="scan-link">
-                <div class="scan-left">
-                    <div class="scan-repo-avatar">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                        </svg>
-                    </div>
-                    <div class="scan-info">
-                        <span class="scan-repo mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
-                        <span class="scan-meta text-muted text-xs">
-                            {% if item.is_example %}<span class="example-tag">Example</span>{% endif %}
-                            {{ item.created_at.strftime("%b %d, %Y") }} &bull; {{ "%.2f"|format(item.duration) }}s
-                            &bull; <span class="profile-tag">{{ item.repo_type }}</span>
+            <ol class="pipeline-steps">
+                <li class="pipeline-step" data-step="fetch">
+                    <span class="step-marker">{{ ui.icon("download", "icon step-icon") }}{{ ui.icon("check", "icon step-done") }}{{ ui.icon("x", "icon step-failed") }}{{ ui.icon("database", "icon step-reused") }}</span>
+                    <span class="step-text">
+                        <span class="step-name">Fetch repo metadata</span>
+                        <span class="step-note" data-note>6 read-only API calls, in parallel</span>
+                        <span class="step-calls" aria-hidden="true">
+                            {% for call in ["metadata", "languages", "contributors", "root_files", "commits", "workflows"] %}<span class="step-call" data-call="{{ call }}"></span>{% endfor %}
                         </span>
-                    </div>
-                </div>
-                <div class="scan-score-wrap">
-                    <span class="score-badge score-{{ score_tier(item.score).key }}">{{ item.score }}</span>
-                </div>
-            </a>
-        </li>
+                    </span>
+                </li>
+                <li class="pipeline-step" data-step="analyze">
+                    <span class="step-marker">{{ ui.icon("list", "icon step-icon") }}{{ ui.icon("check", "icon step-done") }}{{ ui.icon("x", "icon step-failed") }}{{ ui.icon("database", "icon step-reused") }}</span>
+                    <span class="step-text">
+                        <span class="step-name">Check 7 dimensions</span>
+                        <span class="step-note" data-note>from docs to code quality</span>
+                    </span>
+                </li>
+                <li class="pipeline-step" data-step="score">
+                    <span class="step-marker">{{ ui.icon("activity", "icon step-icon") }}{{ ui.icon("check", "icon step-done") }}{{ ui.icon("x", "icon step-failed") }}{{ ui.icon("database", "icon step-reused") }}</span>
+                    <span class="step-text">
+                        <span class="step-name">Score and grade</span>
+                        <span class="step-note" data-note>out of 100, graded A+ to F</span>
+                    </span>
+                </li>
+                <li class="pipeline-step" data-step="recommend">
+                    <span class="step-marker">{{ ui.icon("lightbulb", "icon step-icon") }}{{ ui.icon("check", "icon step-done") }}{{ ui.icon("x", "icon step-failed") }}{{ ui.icon("database", "icon step-reused") }}</span>
+                    <span class="step-text">
+                        <span class="step-name">Suggest next steps</span>
+                        <span class="step-note" data-note>what to fix first</span>
+                    </span>
+                </li>
+            </ol>
+        </section>
+    </div>
+
+    <aside class="hero-side" aria-label="{% if featured and featured.is_example %}Example report{% else %}Latest report{% endif %}">
+        {% if featured %}
+        {% set tier = featured.tier %}
+        <a href="/analysis/{{ featured.id }}" class="card preview-card" id="featured-report">
+            <span class="preview-head">
+                <span class="preview-kind">{{ ui.icon("file", "icon") }}{% if featured.is_example %}Example report{% else %}Latest report{% endif %}</span>
+                <span class="preview-date">Analyzed {{ featured.created_at.strftime("%b %d, %Y") }}</span>
+            </span>
+
+            <span class="preview-top">
+                {{ ui.gauge(featured.score, tier, "md") }}
+                <span class="preview-id">
+                    <span class="preview-repo mono">{{ featured.full_name }}</span>
+                    <span class="preview-profile">{{ featured.profile_label }} profile</span>
+                    <span class="preview-badges">{{ ui.grade_badge(featured.grade, "sm") }}{{ ui.tier_badge(tier) }}</span>
+                </span>
+            </span>
+
+            <span class="preview-bars">
+                {% for dim in featured.dimensions %}
+                <span class="preview-bar-row">
+                    <span class="preview-bar-label">{{ ui.dim_dot(dim.key) }}{{ dim.label }}</span>
+                    <span class="bar"><span class="bar-fill bar-{{ score_tier(dim.percent).key }}" style="--w: {{ dim.percent }}%"></span></span>
+                    <span class="preview-bar-val mono">{{ dim.points }}<span class="muted">/{{ dim.max_points }}</span></span>
+                </span>
+                {% endfor %}
+            </span>
+
+            <span class="preview-cta">Open the full report {{ ui.icon("arrow-right") }}</span>
+        </a>
+
+        {% if examples|length > 1 %}
+        <div class="more-examples">
+            <h2 class="more-title">More example reports</h2>
+            <ul class="example-list">
+                {% for example in examples if example.id != featured.id %}
+                <li>
+                    <a class="example-link" href="/analysis/{{ example.id }}">
+                        <span class="mono">{{ example.full_name }}</span>
+                        <span class="example-score">{{ ui.grade_badge(example.grade, "sm") }}<span class="mono">{{ example.score }}</span></span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% set first, second = examples[0], examples[1] %}
+            <a class="compare-link" href="/compare?a={{ first.full_name|urlencode }}&amp;b={{ second.full_name|urlencode }}">{{ ui.icon("compare") }}Compare {{ first.full_name }} with {{ second.full_name }}</a>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="card side-empty">
+            <div class="empty-state">
+                <span class="empty-icon">{{ ui.icon("file") }}</span>
+                <p class="empty-title">No reports stored yet</p>
+                <p>Analyze a repository and its report will be previewed here.</p>
+            </div>
+        </div>
+        {% endif %}
+    </aside>
+</section>
+
+<!-- Where the 100 points come from: the dimension weights, straight from the scorer -->
+<section class="dimensions-band" aria-labelledby="dimensions-title">
+    <div class="section-head">
+        <h2 id="dimensions-title" class="section-title">Seven dimensions, 100 points</h2>
+        <a href="/scoring">See every check {{ ui.icon("arrow-right", "icon icon-inline") }}</a>
+    </div>
+    <div class="points-bar" role="img" aria-label="How the 100 points are split: {% for key, label in dimension_labels.items() %}{{ label }} {{ max_points[key] }}{% if not loop.last %}, {% endif %}{% endfor %}">
+        {% for key, label in dimension_labels.items() %}
+        <span class="points-seg dim-{{ key }}" style="flex: {{ max_points[key] }}"></span>
+        {% endfor %}
+    </div>
+    <ul class="dim-legend">
+        {% for key, label in dimension_labels.items() %}
+        <li><a class="dim-tag" href="/scoring#{{ key }}">{{ ui.dim_dot(key) }}{{ label }}<span class="dim-tag-points mono">{{ max_points[key] }}</span></a></li>
         {% endfor %}
     </ul>
 </section>
-{% else %}
-<section class="empty-state">
-    <div class="empty-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-    </div>
-    <p class="empty-title">No analyses yet</p>
-    <p class="text-secondary text-sm">Enter a public repository above to run your first report.</p>
-</section>
-{% endif %}
 
-{% endblock %}
+<div class="home-lower">
+    <!-- Recent scans -->
+    <section class="recent-section" aria-labelledby="recent-title">
+        <div class="section-head">
+            <h2 id="recent-title" class="section-title">{{ ui.icon("activity", "icon section-icon") }}Recent scans</h2>
+            <a href="/history" class="btn btn-sm">View all{% if total_reports %} {{ total_reports }}{% endif %}{{ ui.icon("chevron-right") }}</a>
+        </div>
 
-{% block scripts %}
-<script>
-    (function () {
-        const form = document.getElementById('analyze-form');
-        const input = document.getElementById('repo-url');
-        const btn = document.getElementById('analyze-btn');
-        const label = document.getElementById('btn-label');
-        const arrow = btn.querySelector('.btn-arrow');
-        const spinner = document.getElementById('btn-spinner');
-        const progress = document.getElementById('form-progress');
-        const steps = [
-            'Fetching repository metadata from GitHub…',
-            'Reading languages, contributors and recent commits…',
-            'Checking project files and CI workflows…',
-            'Scoring seven engineering dimensions…',
-            'Saving the report…'
-        ];
-        let timer = null;
+        {% if recent_analyses %}
+        <ul class="scan-list" id="recent-scan-list">
+            {% for item in recent_analyses %}
+            {% set item_tier = score_tier(item.score) %}
+            {% set grade = (item.metrics.health_grade if item.metrics else none) or grade_for(item.score) %}
+            <li>
+                <a href="/analysis/{{ item.id }}" class="scan-link">
+                    <span class="scan-avatar">{{ ui.icon("repo") }}</span>
+                    <span class="scan-info">
+                        <span class="scan-repo mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
+                        <span class="scan-meta">
+                            {% if item.is_example %}<span class="tag tag-example">Example</span>{% endif %}
+                            <span class="tag tag-profile">{{ item.repo_type }}</span>
+                            <span class="scan-when">
+                                <time datetime="{{ item.created_at.isoformat() }}Z" data-relative>{{ item.created_at.strftime("%b %d, %Y") }}</time>
+                                <span aria-hidden="true">&middot;</span>
+                                <span class="mono">{{ "%.2f"|format(item.duration) }} s</span>
+                            </span>
+                        </span>
+                    </span>
+                    <span class="scan-score">
+                        {{ ui.grade_badge(grade, "sm") }}
+                        <span class="score-badge score-{{ item_tier.key }}">{{ item.score }}</span>
+                        {{ ui.icon("chevron-right", "icon scan-chevron") }}
+                    </span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="card">
+            <div class="empty-state">
+                <span class="empty-icon">{{ ui.icon("activity") }}</span>
+                <p class="empty-title">No analyses yet</p>
+                <p>Enter a public repository above to run the first report.</p>
+            </div>
+        </div>
+        {% endif %}
+    </section>
 
-        function resetForm() {
-            clearInterval(timer);
-            timer = null;
-            label.textContent = 'Analyze Repo';
-            arrow.style.display = '';
-            spinner.style.display = 'none';
-            btn.disabled = false;
-            btn.removeAttribute('aria-busy');
-            progress.textContent = '';
-            progress.classList.remove('is-active');
-        }
+    <!-- Read-only by design: exactly what is read from GitHub -->
+    <section class="card readonly-card" aria-labelledby="readonly-title">
+        <div class="readonly-head">
+            <span class="card-icon card-icon-good">{{ ui.icon("lock") }}</span>
+            <h2 id="readonly-title" class="card-title">Read-only by design</h2>
+        </div>
+        <p class="text-2">
+            ArchLens reads public metadata through the GitHub REST API. It <strong>never</strong> clones the
+            repository or downloads source files, and it stores only the resulting scores and findings.
+            These are the six requests an analysis makes, all at once:
+        </p>
+        {# <wbr> after each slash lets a long path wrap at a slash on phones #}
+        <ul class="request-list mono">
+            {% for path in ["", "/languages", "/contributors", "/contents/", "/commits?since=30 days ago", "/contents/.github/workflows"] %}
+            <li><span class="verb">GET</span><span class="path">{{ ("/repos/{owner}/{repo}" ~ path)|replace("/", "/<wbr>")|safe }}</span></li>
+            {% endfor %}
+        </ul>
+        <div class="readonly-links">
+            <a href="/scoring">{{ ui.icon("ruler") }}How each point is scored</a>
+            <a href="/compare">{{ ui.icon("compare") }}Compare two repositories</a>
+            <a href="/docs">{{ ui.icon("api") }}REST API docs</a>
+        </div>
+    </section>
+</div>
 
-        form.addEventListener('submit', function () {
-            let step = 0;
-            label.textContent = 'Analyzing…';
-            arrow.style.display = 'none';
-            spinner.style.display = 'block';
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-            progress.textContent = steps[0];
-            progress.classList.add('is-active');
-            timer = setInterval(function () {
-                step = Math.min(step + 1, steps.length - 1);
-                progress.textContent = steps[step];
-                if (step === steps.length - 1) clearInterval(timer);
-            }, 1500);
-        });
-
-        document.querySelectorAll('.example-chip').forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                input.value = chip.dataset.repo;
-                input.focus();
-            });
-        });
-
-        // Going Back restores this page from the bfcache with the button still busy
-        window.addEventListener('pageshow', resetForm);
-    })();
-</script>
 {% endblock %}

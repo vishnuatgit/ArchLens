@@ -1,416 +1,470 @@
 {% extends "base.html" %}
+{% import "_ui.html" as ui %}
 
-{% block title %}{{ owner }}/{{ name }} &mdash; ArchLens Engineering Analysis{% endblock %}
-{% block meta_description %}Engineering analysis for {{ owner }}/{{ name }}. Overall score: {{ score }}/100 across documentation, activity, organization, community, and maintainability.{% endblock %}
+{% block title %}{{ report.full_name }}: {{ report.grade }}, {{ report.score }}/100 &mdash; ArchLens{% endblock %}
+{% block meta_description %}ArchLens report for {{ report.full_name }}: {{ report.score }}/100, grade {{ report.grade }}, across documentation, activity, organization, community, maintainability, security and code quality.{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/static/css/results.css?v=3" />
+<link rel="stylesheet" href="/static/css/results.css?v={{ asset_version }}" />
 {% endblock %}
 
 {% block content %}
+{% set tier = report.tier %}
+{% set status_icons = {"passed": "check-circle", "partial": "half-circle", "missing": "x-circle", "given": "gift", "skipped": "minus-circle", "unknown": "help"} %}
+{% set status_labels = {"passed": "Passed", "partial": "Partial", "missing": "Missing", "given": "Given", "skipped": "Not scored", "unknown": "Not recorded"} %}
 
-{% set tier = score_tier(score) %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">{{ ui.icon("search") }}Analyze</a>
+    <span aria-hidden="true">/</span>
+    <a href="/history">History</a>
+    <span aria-hidden="true">/</span>
+    <span class="mono" aria-current="page">{{ report.full_name }}</span>
+</nav>
 
-<!-- Page Header -->
-<div class="results-header">
-    <div class="results-breadcrumb">
-        <a href="/" class="breadcrumb-link">
-            <svg style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            </svg>
-            Analyze
-        </a>
-        <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current mono">{{ owner }}/{{ name }}</span>
+<!-- Report header: what was inspected, when, and what you can do with the report -->
+<header class="report-header">
+    <div class="report-id">
+        <div class="report-title-row">
+            <h1 class="report-title mono">{{ report.full_name }}</h1>
+            <span class="tag tag-profile">{{ report.profile_label }}</span>
+            {% if report.is_example %}<span class="tag tag-example">Example</span>{% endif %}
+        </div>
+        <p class="report-meta">
+            <span>Report #{{ report.id }}</span>
+            <span aria-hidden="true">&middot;</span>
+            <span>Analyzed <time datetime="{{ report.created_at.isoformat() }}Z">{{ report.created_at.strftime("%B %d, %Y at %H:%M UTC") }}</time></span>
+            <span aria-hidden="true">&middot;</span>
+            <span>took <span class="mono">{{ "%.2f"|format(report.duration) }}</span>&nbsp;s</span>
+        </p>
     </div>
-
-    <div class="results-meta-row">
-        <div>
-            <div class="repo-title-wrap">
-                <h1 class="results-repo-title mono">{{ owner }}/{{ name }}</h1>
-                <span class="profile-badge profile-{{ repo_type }}">{{ repo_type }}</span>
+    <div class="report-actions">
+        <button type="button" class="btn btn-sm" data-copy-text="{{ report_url }}" data-copied="Link to this report copied">
+            {{ ui.icon("link") }}<span class="btn-label">Copy link</span>
+        </button>
+        <details class="menu">
+            <summary class="btn btn-sm">{{ ui.icon("file") }}<span>Export</span>{{ ui.icon("chevron-down", "icon icon-chevron") }}</summary>
+            <div class="menu-panel">
+                <button type="button" class="menu-item" data-copy-from="#report-markdown" data-copied="Report copied as Markdown">
+                    {{ ui.icon("copy") }}<span>Copy as Markdown<small>For an issue, PR or notes</small></span>
+                </button>
+                <a class="menu-item" href="/analysis/{{ report.id }}/report.md" download>
+                    {{ ui.icon("download") }}<span>Download .md<small>The same report as a file</small></span>
+                </a>
+                <a class="menu-item" href="/api/v1/analyses/{{ report.id }}">
+                    {{ ui.icon("api") }}<span>View as JSON<small>From the REST API</small></span>
+                </a>
             </div>
-            <p class="results-sub text-secondary text-sm">
-                Analyzed {{ created_at.strftime("%B %d, %Y at %H:%M UTC") }}
-                &bull; Duration {{ "%.2f"|format(duration) }}s
-            </p>
-        </div>
-        <div class="meta-action-btns">
-            <button id="share-btn" class="btn btn-secondary btn-sm" onclick="copyReportLink()">
-                <svg style="width: 15px; height: 15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                    <polyline points="16 6 12 2 8 6" />
-                    <line x1="12" y1="2" x2="12" y2="15" />
-                </svg>
-                <span id="share-btn-text">Copy as Markdown</span>
-            </button>
-            <a href="https://github.com/{{ owner }}/{{ name }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
-                <svg style="width: 15px; height: 15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-                </svg>
-                <span>View on GitHub</span>
-            </a>
-        </div>
+        </details>
+        <a class="btn btn-sm" href="/compare?a={{ report.full_name|urlencode }}&amp;profile={{ report.repo_type }}">{{ ui.icon("compare") }}Compare</a>
+        <a class="btn btn-sm" href="{{ report.url }}" rel="noopener">{{ ui.icon("github") }}GitHub{{ ui.icon("external", "icon icon-ext") }}</a>
     </div>
-</div>
+</header>
 
-{% if is_example %}
+{% if report.is_example %}
 <!-- Example reports are bundled with the app; say so and offer a live re-run -->
-<div class="example-banner mb-6" role="note">
-    <svg class="example-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12.01" y2="8" />
-    </svg>
-    <p class="example-banner-text">
-        <strong>Example report.</strong>
-        Captured from live GitHub data on {{ created_at.strftime("%B %d, %Y") }}, so the numbers reflect that date.
+<div class="alert alert-info report-banner" role="note">
+    {{ ui.icon("info") }}
+    <p class="alert-body">
+        <span><strong>Example report.</strong> Captured from live GitHub data on {{ report.created_at.strftime("%B %d, %Y") }}, so the numbers reflect that date.</span>
     </p>
-    <form method="POST" action="/analyze" class="example-banner-form">
-        <input type="hidden" name="url" value="{{ owner }}/{{ name }}" />
-        <input type="hidden" name="repo_type" value="{{ repo_type }}" />
-        <button type="submit" class="btn btn-secondary btn-sm">Run a fresh analysis</button>
-    </form>
+    <a class="btn btn-sm banner-action" href="{{ rerun_url }}">{{ ui.icon("refresh") }}Run a fresh analysis</a>
+</div>
+{% elif refreshable %}
+<div class="alert alert-info report-banner" role="note">
+    {{ ui.icon("clock") }}
+    <p class="alert-body">
+        <span>This report is from <time datetime="{{ report.created_at.isoformat() }}Z" data-relative>{{ report.created_at.strftime("%B %d, %Y") }}</time>. The repository may have changed since.</span>
+    </p>
+    <a class="btn btn-sm banner-action" href="{{ rerun_url }}">{{ ui.icon("refresh") }}Analyze again</a>
 </div>
 {% endif %}
 
-<!-- Overview: summary, gauge and breakdown share one grid so small screens show the score first -->
-<div class="results-overview">
+<!-- Overview: score first (it is also first on small screens), then the summary -->
+<div class="overview">
+    <section class="card score-card" aria-label="Overall score">
+        <p class="eyebrow">Overall health score</p>
+        {{ ui.gauge(report.score, tier, "lg") }}
+        <div class="score-badges">
+            {{ ui.grade_badge(report.grade, "lg") }}
+            {{ ui.tier_badge(tier) }}
+        </div>
+    </section>
 
-    {% if executive_summary %}
-    <!-- Executive Summary Card -->
-    <div class="card exec-summary-card">
+    <section class="card summary-card" aria-labelledby="summary-title">
         <div class="card-header">
-            <div class="findings-title-wrap">
-                <svg class="findings-icon text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                    <polyline points="10 9 9 9 8 9" />
-                </svg>
-                <span class="card-title">Executive Health Summary</span>
+            <div class="card-title-wrap">
+                <span class="card-icon">{{ ui.icon("file") }}</span>
+                <h2 id="summary-title" class="card-title">Executive summary</h2>
             </div>
-            <span class="grade-badge grade-{{ health_grade|lower|replace('+', 'plus') }}">{{ health_grade }}</span>
+            <a class="small" href="/scoring?profile={{ report.repo_type }}">How this is scored</a>
         </div>
-        <p class="exec-summary-text">{{ executive_summary }}</p>
-    </div>
-    {% endif %}
+        {% if report.summary %}
+        <p class="summary-text">{{ report.summary }}</p>
+        {% else %}
+        <p class="summary-text muted">No summary was stored for this analysis.</p>
+        {% endif %}
 
-    <!-- Overall Score Gauge -->
-    <div class="card score-card">
-        <p class="card-title">Overall Health Score</p>
-
-        <div class="gauge-wrap" aria-label="Overall score: {{ score }} out of 100">
-            <svg class="gauge-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                <!-- Background track -->
-                <circle class="gauge-track" cx="60" cy="60" r="50" fill="none" stroke-width="10" />
-                <!-- Score arc filled dynamically -->
-                <circle class="gauge-fill" cx="60" cy="60" r="50" fill="none" stroke-width="10"
-                    style="--score: {{ score }};" />
-            </svg>
-            <div class="gauge-label">
-                <span class="gauge-number gauge-{{ tier.key }}">{{ score }}</span>
-                <span class="gauge-total">/100</span>
+        {% set scored_checks = evidence|map(attribute="scored_checks")|map("length")|sum %}
+        {% set passed_checks = evidence|map(attribute="passed_count")|sum %}
+        <dl class="summary-stats">
+            <div>
+                <dt>Full marks</dt>
+                <dd><span class="mono">{{ report.full_marks_count }}</span><span class="of">/7 dimensions</span></dd>
             </div>
-        </div>
-
-        <div class="score-tier-label tier-{{ tier.key }}">{{ tier.label }}</div>
-    </div>
-
-    <!-- Dimension Breakdown -->
-    <div class="card breakdown-card">
-        <p class="card-title">Engineering Dimension Breakdown</p>
-        <ul class="breakdown-list">
-            {% set dims = [
-                ("Documentation", breakdown.get("documentation", 0), max_points["documentation"], "doc"),
-                ("Activity",      breakdown.get("activity", 0),      max_points["activity"], "act"),
-                ("Organization",  breakdown.get("organization", 0),  max_points["organization"], "org"),
-                ("Community",     breakdown.get("community", 0),     max_points["community"], "com"),
-                ("Maintainability", breakdown.get("maintainability", 0), max_points["maintainability"], "mnt"),
-                ("Security",      breakdown.get("security", 0),      max_points["security"], "sec"),
-                ("Code Quality",  breakdown.get("code_quality", 0),  max_points["code_quality"], "qlty")
-            ] %}
-            {% for label, val, max_val, key in dims %}
-            <li class="breakdown-row">
-                <div class="breakdown-row-top">
-                    <span class="breakdown-label">
-                        <span class="dim-indicator dim-{{ key }}"></span>
-                        {{ label }}
-                    </span>
-                    <span class="breakdown-val mono">{{ val }}<span class="text-muted">/{{ max_val }}</span></span>
-                </div>
-                <div class="progress-bar-wrap">
-                    <div class="progress-bar-fill bar-{{ score_tier(val / max_val * 100).key }}"
-                        style="width: {{ (val / max_val * 100)|int }}%;">
-                    </div>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
-
+            {% if evidence|selectattr("verified")|list|length == evidence|length %}
+            <div>
+                <dt>Checks passed</dt>
+                <dd><span class="mono">{{ passed_checks }}</span><span class="of">/{{ scored_checks }}</span></dd>
+            </div>
+            {% endif %}
+            <div>
+                <dt>Concerns</dt>
+                <dd><span class="mono">{{ report.weaknesses|length }}</span></dd>
+            </div>
+            {% if fix_plan and fix_plan.exact_gain %}
+            <div>
+                <dt>Within reach</dt>
+                <dd><span class="mono">+{{ fix_plan.exact_gain }}</span><span class="of">pts &rarr; {{ fix_plan.projected_score }} ({{ fix_plan.projected_grade }})</span></dd>
+            </div>
+            {% endif %}
+        </dl>
+        <p class="summary-note">{{ ui.icon("info") }}Scores come from repository metadata, not from reading or running the code.</p>
+    </section>
 </div>
 
-<!-- Repository Metadata Strip -->
-<div class="metrics-strip">
+<!-- Repository facts -->
+<section class="metrics-strip" aria-label="Repository facts">
     <div class="metric-tile">
-        <div class="metric-tile-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            <span class="metric-label">Stars</span>
-        </div>
-        <span class="metric-value" title="{{ '{:,}'.format(stars) }} stars">{{ stars|compact }}</span>
+        <span class="metric-label">{{ ui.icon("star") }}Stars</span>
+        <span class="metric-value" title="{{ '{:,}'.format(report.stars) }} stars">{{ report.stars|compact }}</span>
     </div>
-
     <div class="metric-tile">
-        <div class="metric-tile-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="18" r="3" />
-                <circle cx="6" cy="6" r="3" />
-                <circle cx="18" cy="6" r="3" />
-                <path d="M18 9v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9" />
-                <path d="M12 12v3" />
-            </svg>
-            <span class="metric-label">Forks</span>
-        </div>
-        <span class="metric-value" title="{{ '{:,}'.format(forks) }} forks">{{ forks|compact }}</span>
+        <span class="metric-label">{{ ui.icon("fork") }}Forks</span>
+        <span class="metric-value" title="{{ '{:,}'.format(report.forks) }} forks">{{ report.forks|compact }}</span>
     </div>
-
     <div class="metric-tile">
-        <div class="metric-tile-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span class="metric-label">Open Issues</span>
-        </div>
-        <span class="metric-value" title="{{ '{:,}'.format(open_issues) }} open issues and pull requests">{{ open_issues|compact }}</span>
+        <span class="metric-label">{{ ui.icon("issue") }}Open issues</span>
+        <span class="metric-value" title="{{ '{:,}'.format(report.open_issues) }} open issues and pull requests">{{ report.open_issues|compact }}</span>
     </div>
-
     <div class="metric-tile">
-        <div class="metric-tile-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            <span class="metric-label">Contributors</span>
-        </div>
-        {% if contributor_count >= api_page_cap %}
+        <span class="metric-label">{{ ui.icon("users") }}Contributors</span>
+        {% if report.contributor_count >= api_page_cap %}
         <span class="metric-value" title="GitHub returns contributors one page at a time; this repository has at least {{ api_page_cap }}">{{ api_page_cap }}+</span>
         {% else %}
-        <span class="metric-value">{{ contributor_count }}</span>
+        <span class="metric-value">{{ report.contributor_count }}</span>
         {% endif %}
     </div>
-
     <div class="metric-tile">
-        <div class="metric-tile-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <ellipse cx="12" cy="5" rx="9" ry="3" />
-                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-            </svg>
-            <span class="metric-label">Disk Size</span>
-        </div>
-        <span class="metric-value">{{ repo_size|size_kb }}</span>
+        <span class="metric-label">{{ ui.icon("commit") }}Last push</span>
+        {% if report.last_pushed %}
+        {# Same year as the scan: "Oct 28"; otherwise the year matters more than the day #}
+        <span class="metric-value" title="Last pushed {{ report.last_pushed.strftime('%B %d, %Y') }}">{{ report.last_pushed.strftime("%b %d" if report.last_pushed.year == report.created_at.year else "%b %Y") }}</span>
+        <span class="metric-sub">{% if report.days_since_push == 0 %}same day as the scan{% else %}{{ report.days_since_push }} {{ "day" if report.days_since_push == 1 else "days" }} before the scan{% endif %}</span>
+        {% else %}
+        <span class="metric-value">&mdash;</span>
+        {% endif %}
     </div>
-
     <div class="metric-tile">
-        <div class="metric-tile-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="16 18 22 12 16 6" />
-                <polyline points="8 6 2 12 8 18" />
-            </svg>
-            <span class="metric-label">Languages</span>
+        <span class="metric-label">{{ ui.icon("workflow") }}CI workflows</span>
+        {% if workflows is none %}
+        <span class="metric-value">&mdash;</span>
+        {% elif workflows == 0 %}
+        <span class="metric-value metric-bad">None</span>
+        <span class="metric-sub">in .github/workflows</span>
+        {% else %}
+        <span class="metric-value">{{ workflows }}</span>
+        <span class="metric-sub">GitHub Actions</span>
+        {% endif %}
+    </div>
+    <div class="metric-tile">
+        <span class="metric-label">{{ ui.icon("database") }}Size</span>
+        <span class="metric-value">{{ report.repo_size|size_kb }}</span>
+    </div>
+    <div class="metric-tile">
+        <span class="metric-label">{{ ui.icon("code") }}Languages</span>
+        <span class="metric-value">{{ report.language_count }}</span>
+    </div>
+</section>
+
+<div class="report-grid">
+    <!-- What to fix first: the point of the report -->
+    <section class="card fix-card" aria-labelledby="fix-title">
+        <div class="card-header">
+            <div class="card-title-wrap">
+                <span class="card-icon card-icon-warn">{{ ui.icon("lightbulb") }}</span>
+                <h2 id="fix-title" class="card-title">What to fix first</h2>
+                {% set fix_count = fix_plan.fixes|length if fix_plan else report.suggestions|length %}
+                <span class="count-pill">{{ fix_count }}</span>
+            </div>
+            {% if fix_plan and fix_plan.fixes %}
+            <button type="button" class="btn btn-sm btn-ghost" data-copy-from="#fix-checklist" data-copied="Checklist copied as Markdown">
+                {{ ui.icon("copy") }}<span class="btn-label">Copy checklist</span>
+            </button>
+            {% endif %}
         </div>
-        <span class="metric-value">{{ language_count }}</span>
+
+        {% if fix_plan and fix_plan.fixes %}
+        {% if fix_plan.exact_gain %}
+        <div class="projection">
+            <p>Do the {{ fix_plan.fixes|selectattr("exact")|list|length }} file-level fixes and the score goes from <strong class="mono">{{ report.score }}</strong> to <strong class="mono">{{ fix_plan.projected_score }}</strong> ({{ fix_plan.projected_grade }}).</p>
+            <div class="projection-bar" role="img" aria-label="Score {{ report.score }} now, {{ fix_plan.projected_score }} after the fixes">
+                <span class="projection-now bar-{{ tier.key }}" style="--w: {{ report.score }}%"></span>
+                <span class="projection-gain" style="--w: {{ fix_plan.projected_score - report.score }}%"></span>
+            </div>
+            <div class="projection-scale mono" aria-hidden="true"><span>0</span><span>50</span><span>100</span></div>
+        </div>
+        {% endif %}
+        <ol class="fix-list">
+            {% for fix in fix_plan.fixes %}
+            <li class="fix-item">
+                <span class="fix-index mono">{{ loop.index }}</span>
+                <span class="fix-body">
+                    <span class="fix-action">{{ fix.action }}</span>
+                    <span class="fix-meta">{{ ui.dim_dot(fix.dimension_key) }}<a href="#dim-{{ fix.dimension_key }}">{{ fix.dimension_label }}</a> &middot; {{ fix.check_label }}</span>
+                </span>
+                <span class="gain {% if fix.exact %}gain-exact{% endif %}" title="{% if fix.exact %}Adds exactly {{ fix.gain }} points{% else %}Adds up to {{ fix.gain }} points, depending on how far it goes{% endif %}">{% if not fix.exact %}up to {% endif %}+{{ fix.gain }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+        <textarea id="fix-checklist" hidden readonly aria-hidden="true">{% for fix in fix_plan.fixes %}- [ ] {{ fix.action }} ({% if not fix.exact %}up to {% endif %}+{{ fix.gain }} points, {{ fix.dimension_label|lower }})
+{% endfor %}</textarea>
+        {% elif report.suggestions %}
+        <ol class="fix-list">
+            {% for item in report.suggestions %}
+            <li class="fix-item">
+                <span class="fix-index mono">{{ loop.index }}</span>
+                <span class="fix-body"><span class="fix-action">{{ item }}</span></span>
+            </li>
+            {% endfor %}
+        </ol>
+        {% else %}
+        <div class="empty-state compact">
+            <span class="empty-icon">{{ ui.icon("check-circle") }}</span>
+            <p class="empty-title">Nothing to fix</p>
+            <p>Every check that applies to this profile passed.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <div class="report-side">
+        <!-- The shape of the score -->
+        <section class="card radar-card" aria-labelledby="radar-title">
+            <div class="card-header">
+                <div class="card-title-wrap">
+                    <span class="card-icon card-icon-info">{{ ui.icon("activity") }}</span>
+                    <h2 id="radar-title" class="card-title">Dimension profile</h2>
+                </div>
+                <span class="card-subtitle">% of each dimension&rsquo;s points</span>
+            </div>
+            {{ ui.radar(radar) }}
+            {% set best = report.dimensions|map(attribute="percent")|max %}
+            {% set worst = report.dimensions|map(attribute="percent")|min %}
+            <dl class="radar-notes">
+                <div>
+                    <dt>{{ ui.icon("trend", "icon icon-xs") }}Strongest</dt>
+                    <dd>{{ report.dimensions|selectattr("percent", "equalto", best)|map(attribute="label")|join(", ") }} <span class="mono muted">{{ best }}%</span></dd>
+                </div>
+                {% if worst < best %}
+                <div>
+                    <dt>{{ ui.icon("alert", "icon icon-xs") }}Weakest</dt>
+                    <dd>{{ report.dimensions|selectattr("percent", "equalto", worst)|map(attribute="label")|join(", ") }} <span class="mono muted">{{ worst }}%</span></dd>
+                </div>
+                {% endif %}
+            </dl>
+        </section>
+
+        <!-- Language mix -->
+        <section class="card lang-card" aria-labelledby="lang-title">
+            <div class="card-header">
+                <div class="card-title-wrap">
+                    <span class="card-icon">{{ ui.icon("code") }}</span>
+                    <h2 id="lang-title" class="card-title">Languages</h2>
+                </div>
+                <span class="card-subtitle">{{ languages|length }} detected, by bytes of code</span>
+            </div>
+            {% if languages %}
+            <div class="lang-bar" role="img" aria-label="Language mix: {% for lang, pct, color in languages %}{{ lang }} {{ pct }}%{% if not loop.last %}, {% endif %}{% endfor %}">
+                {% for lang, pct, color in languages %}
+                <span class="lang-seg" style="flex: {{ pct }} 1 0; background: {{ color }}" title="{{ lang }}: {{ pct }}%"></span>
+                {% endfor %}
+            </div>
+            <ul class="lang-legend">
+                {% for lang, pct, color in languages %}
+                <li><span class="lang-dot" style="background: {{ color }}"></span><span class="lang-name">{{ lang }}</span><span class="mono muted">{{ pct if pct >= 0.1 else "<0.1" }}%</span></li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted small">GitHub reported no languages for this repository.</p>
+            {% endif %}
+        </section>
     </div>
 </div>
 
-<!-- Language Distribution -->
-{% if languages %}
-<div class="card lang-card mt-6">
+<!-- Dimension scores with the evidence behind each one -->
+<section class="card dims-card" aria-labelledby="dims-title">
     <div class="card-header">
-        <span class="card-title">Language Breakdown</span>
-        <span class="text-xs text-muted mono">{{ languages|length }} Languages Detected</span>
+        <div class="card-title-wrap">
+            <span class="card-icon">{{ ui.icon("list") }}</span>
+            <h2 id="dims-title" class="card-title">Dimension scores</h2>
+        </div>
+        <div class="btn-row">
+            <span class="card-subtitle hide-sm">Open a dimension to see each check</span>
+            <button type="button" class="btn btn-sm btn-ghost" data-toggle-details="#dim-list" aria-controls="dim-list">{{ ui.icon("chevron-down") }}<span class="btn-label">Expand all</span></button>
+        </div>
     </div>
-    <div class="lang-bar-wrap" role="img" aria-label="Language distribution">
-        {% for lang, pct in languages.items() %}
-        <div class="lang-segment lang-seg-{{ loop.index0 % 5 }}" style="width: {{ pct }}%;" title="{{ lang }}: {{ pct }}%"></div>
-        {% endfor %}
-    </div>
-    <ul class="lang-legend">
-        {% for lang, pct in languages.items() %}
-        <li class="lang-legend-item">
-            <span class="lang-dot lang-seg-{{ loop.index0 % 5 }}"></span>
-            <span class="text-sm font-semibold">{{ lang }}</span>
-            <span class="text-xs text-muted mono">{{ pct }}%</span>
+
+    <ul class="dim-list" id="dim-list">
+        {% for dim in evidence %}
+        {% set pct = (dim.points / dim.max_points * 100)|round|int if dim.max_points else 0 %}
+        <li>
+            <details class="dim" id="dim-{{ dim.key }}">
+                <summary class="dim-summary">
+                    <span class="dim-name">{{ ui.dim_dot(dim.key) }}{{ dim.label }}</span>
+                    <span class="dim-checks">{% if dim.verified %}{{ dim.passed_count }}/{{ dim.scored_checks|length }} checks{% endif %}</span>
+                    <span class="bar"><span class="bar-fill bar-{{ score_tier(pct).key }}" style="--w: {{ [pct, 100]|min }}%"></span></span>
+                    <span class="dim-points mono">{{ dim.points }}<span class="of">/{{ dim.max_points }}</span></span>
+                    {{ ui.icon("chevron-down", "icon dim-chevron") }}
+                </summary>
+                <div class="dim-body">
+                    {% if dim.verified %}
+                    <ul class="check-list">
+                        {% for check in dim.checks %}
+                        <li class="check check-{{ check.status }}">
+                            <span class="check-status" title="{{ status_labels[check.status] }}">{{ ui.icon(status_icons[check.status]) }}<span class="visually-hidden">{{ status_labels[check.status] }}:</span></span>
+                            <span class="check-text">
+                                <span class="check-label">{{ check.label }}</span>
+                                {% set looked_for %}{% for name in check.names[:6] %}<code>{{ name }}</code>{{ ", " if not loop.last }}{% endfor %}{% if check.names|length > 6 %} and {{ check.names|length - 6 }} more{% endif %}{% endset %}
+                                <span class="check-evidence">
+                                    {% if check.evidence %}{{ check.evidence }}{% if check.status == "missing" and check.names %} Looks for {{ looked_for }}.{% endif %}
+                                    {% elif check.status == "given" %}Full points without checking, under the {{ report.profile_label|lower }} profile.
+                                    {% elif check.status == "skipped" %}Not part of the {{ report.profile_label|lower }} profile.
+                                    {% elif check.status == "passed" %}{% if check.names %}Found one of {{ looked_for }}.{% else %}Found.{% endif %}
+                                    {% elif check.names %}None of {{ looked_for }} found.
+                                    {% else %}Not found. {{ check.detail }}{% endif %}
+                                </span>
+                            </span>
+                            <span class="check-points mono">{% if check.status == "skipped" %}&ndash;{% else %}{{ check.earned }}<span class="of">/{{ check.possible }}</span>{% endif %}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% for note in dim.notes %}<p class="dim-note">{{ ui.icon("info") }}{{ note }}</p>{% endfor %}
+                    {% else %}
+                    <p class="dim-note">{{ ui.icon("info") }}This report was stored without check-level detail, so only the dimension total is shown.</p>
+                    {% endif %}
+                    <a class="dim-link" href="/scoring?profile={{ report.repo_type }}#{{ dim.key }}">How {{ dim.label|lower }} is scored {{ ui.icon("arrow-right") }}</a>
+                </div>
+            </details>
         </li>
         {% endfor %}
     </ul>
-</div>
-{% endif %}
-
-<!-- Strengths & Weaknesses Grid -->
-<div class="findings-grid mt-6">
-
-    <!-- Strengths -->
-    {% if strengths %}
-    <div class="card findings-card">
-        <div class="card-header">
-            <div class="findings-title-wrap">
-                <svg class="findings-icon text-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-                <span class="card-title">Key Strengths</span>
-            </div>
-            <span class="findings-count findings-count-green">{{ strengths|length }}</span>
-        </div>
-        <ul class="findings-list">
-            {% for item in strengths %}
-            <li class="finding-item finding-strength">
-                <span class="finding-dot dot-green"></span>
-                <span class="text-sm">{{ item }}</span>
-            </li>
-            {% endfor %}
-        </ul>
+    <div class="dim-total">
+        <span>Total</span>
+        <span class="bar"><span class="bar-fill bar-{{ tier.key }}" style="--w: {{ report.score }}%"></span></span>
+        <span class="dim-points mono">{{ report.score }}<span class="of">/100</span></span>
     </div>
-    {% endif %}
+</section>
 
-    <!-- Weaknesses -->
-    {% if weaknesses %}
-    <div class="card findings-card">
-        <div class="card-header">
-            <div class="findings-title-wrap">
-                <svg class="findings-icon text-red" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-                <span class="card-title">Areas of Concern</span>
-            </div>
-            <span class="findings-count findings-count-red">{{ weaknesses|length }}</span>
-        </div>
-        <ul class="findings-list">
-            {% for item in weaknesses %}
-            <li class="finding-item finding-weakness">
-                <span class="finding-dot dot-red"></span>
-                <span class="text-sm">{{ item }}</span>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-
-</div>
-
-<!-- Recommendations -->
-{% if suggestions %}
-<div class="card suggestions-card mt-6">
+<!-- Every finding the scorer recorded: what is good next to what is not, as in the first design -->
+<section class="card findings-card" aria-labelledby="findings-title">
     <div class="card-header">
-        <div class="findings-title-wrap">
-            <svg class="findings-icon text-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="9" y1="18" x2="15" y2="18" />
-                <line x1="10" y1="22" x2="14" y2="22" />
-                <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
-            </svg>
-            <span class="card-title">Actionable Recommendations</span>
+        <div class="card-title-wrap">
+            <span class="card-icon">{{ ui.icon("list") }}</span>
+            <h2 id="findings-title" class="card-title">All findings</h2>
         </div>
-        <span class="findings-count findings-count-amber">{{ suggestions|length }}</span>
+        <span class="card-subtitle">In the scorer&rsquo;s own words</span>
     </div>
-    <ul class="suggestions-list">
-        {% for item in suggestions %}
-        <li class="suggestion-item">
-            <span class="suggestion-index mono">{{ loop.index }}</span>
-            <span class="text-sm">{{ item }}</span>
-        </li>
-        {% endfor %}
-    </ul>
-</div>
+    <div class="findings-grid">
+        <div class="findings-col findings-col-good">
+            <h3 class="findings-head findings-head-good" id="strengths-title">{{ ui.icon("check-circle") }}Key strengths<span class="count-pill">{{ report.strengths|length }}</span></h3>
+            {% if report.strengths %}
+            <ul class="finding-list">
+                {% for item in report.strengths %}
+                <li class="finding finding-good">{{ ui.icon("check") }}<span>{{ item }}</span></li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted small">No strengths were recorded.</p>
+            {% endif %}
+        </div>
+        <div class="findings-col findings-col-bad">
+            <h3 class="findings-head findings-head-bad" id="concerns-title">{{ ui.icon("alert") }}Areas of concern<span class="count-pill">{{ report.weaknesses|length }}</span></h3>
+            {% if report.weaknesses %}
+            <ul class="finding-list">
+                {% for item in report.weaknesses %}
+                <li class="finding finding-bad">{{ ui.icon("x") }}<span>{{ item }}</span></li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted small">No concerns were found.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<div class="report-grid{% if timeline|length > 1 %} report-grid-even{% else %} report-grid-single{% endif %}">
+    <!-- README badge: served from stored results, never from GitHub -->
+    <section class="card badge-card" aria-labelledby="badge-title">
+        <div class="card-header">
+            <div class="card-title-wrap">
+                <span class="card-icon card-icon-good">{{ ui.icon("badge") }}</span>
+                <h2 id="badge-title" class="card-title">Add a badge to your README</h2>
+            </div>
+        </div>
+        <div class="badge-preview">
+            <img src="{{ badge_url }}" alt="ArchLens badge for {{ report.full_name }}" height="20" />
+            <span class="muted small">Shows the newest stored {{ report.profile_label|lower }} grade, and links to the newest report. It never calls GitHub.</span>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Badge snippet format">
+            <button type="button" class="tab" role="tab" id="tab-badge-md" aria-controls="panel-badge-md" aria-selected="true">Markdown</button>
+            <button type="button" class="tab" role="tab" id="tab-badge-html" aria-controls="panel-badge-html" aria-selected="false">HTML</button>
+            <button type="button" class="tab" role="tab" id="tab-badge-url" aria-controls="panel-badge-url" aria-selected="false">Image URL</button>
+        </div>
+        <div class="tab-panel" id="panel-badge-md" role="tabpanel" aria-labelledby="tab-badge-md">
+            <div class="snippet"><pre id="badge-markdown">{{ badge_markdown }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-markdown" data-copied="Badge Markdown copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
+        </div>
+        <div class="tab-panel" id="panel-badge-html" role="tabpanel" aria-labelledby="tab-badge-html">
+            <div class="snippet"><pre id="badge-html">{{ badge_html }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-html" data-copied="Badge HTML copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
+        </div>
+        <div class="tab-panel" id="panel-badge-url" role="tabpanel" aria-labelledby="tab-badge-url">
+            <div class="snippet"><pre id="badge-url">{{ badge_url }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-url" data-copied="Badge URL copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
+        </div>
+    </section>
+{% if timeline|length > 1 %}
+    <!-- Every stored report of this repository -->
+    <section class="card timeline-card" aria-labelledby="timeline-title">
+        <div class="card-header">
+            <div class="card-title-wrap">
+                <span class="card-icon">{{ ui.icon("trend") }}</span>
+                <h2 id="timeline-title" class="card-title">Score history</h2>
+                <span class="count-pill">{{ timeline|length }}</span>
+            </div>
+            <span class="card-subtitle">Every stored report of {{ report.full_name }}</span>
+        </div>
+        <ol class="timeline">
+            {% for run in timeline|reverse %}
+            {% set run_grade = (run.metrics.health_grade if run.metrics else none) or grade_for(run.score) %}
+            <li>
+                <a class="timeline-row{% if run.id == report.id %} is-current{% endif %}" href="/analysis/{{ run.id }}"{% if run.id == report.id %} aria-current="page"{% endif %}>
+                    <span class="mono timeline-date">{{ run.created_at.strftime("%Y-%m-%d %H:%M") }}</span>
+                    <span class="timeline-tags"><span class="tag tag-profile">{{ run.repo_type }}</span>{% if run.is_example %}<span class="tag tag-example">Example</span>{% endif %}</span>
+                    <span class="bar"><span class="bar-fill bar-{{ score_tier(run.score).key }}" style="--w: {{ run.score }}%"></span></span>
+                    {{ ui.grade_badge(run_grade, "sm") }}
+                    <span class="mono timeline-score">{{ run.score }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ol>
+    </section>
 {% endif %}
-
-<!-- Footer Actions -->
-<div class="results-footer-actions mt-8">
-    <a href="/" class="btn btn-primary">
-        <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <span>Run Another Scan</span>
-    </a>
-    <a href="/history" class="btn btn-secondary">
-        <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>View Full History</span>
-    </a>
 </div>
 
-<!-- Hidden Markdown Export -->
-<textarea id="markdown-export" style="display: none;">
-# ArchLens Engineering Report: {{ owner }}/{{ name }}
-**Overall Score:** {{ score }}/100 ({{ health_grade }})
-**Profile:** {{ repo_type | title }}
-**Date:** {{ created_at.strftime("%B %d, %Y") }}
+<!-- The Markdown export, kept in the page so "Copy as Markdown" works without a request -->
+<textarea id="report-markdown" hidden readonly aria-hidden="true">{{ markdown }}</textarea>
 
-{% if executive_summary %}## Executive Summary
-{{ executive_summary }}
-{% endif %}
-## Key Metrics
-- **Stars:** {{ '{:,}'.format(stars) }} | **Forks:** {{ '{:,}'.format(forks) }} | **Open Issues:** {{ '{:,}'.format(open_issues) }}
-- **Contributors:** {{ contributor_count }}{% if contributor_count >= api_page_cap %}+{% endif %} | **Size:** {{ repo_size|size_kb }}
+<div class="report-footer">
+    <a href="/" class="btn btn-primary">{{ ui.icon("search") }}Analyze another repository</a>
+    <a href="/compare?a={{ report.full_name|urlencode }}&amp;profile={{ report.repo_type }}" class="btn">{{ ui.icon("compare") }}Compare with another</a>
+    <a href="/history" class="btn">{{ ui.icon("clock") }}All reports</a>
+</div>
 
-## Dimension Breakdown
-- Documentation: {{ breakdown.get("documentation", 0) }}/{{ max_points["documentation"] }}
-- Activity: {{ breakdown.get("activity", 0) }}/{{ max_points["activity"] }}
-- Organization: {{ breakdown.get("organization", 0) }}/{{ max_points["organization"] }}
-- Community: {{ breakdown.get("community", 0) }}/{{ max_points["community"] }}
-- Maintainability: {{ breakdown.get("maintainability", 0) }}/{{ max_points["maintainability"] }}
-- Security: {{ breakdown.get("security", 0) }}/{{ max_points["security"] }}
-- Code Quality: {{ breakdown.get("code_quality", 0) }}/{{ max_points["code_quality"] }}
-
-{% if strengths %}## Key Strengths
-{% for item in strengths %}- {{ item }}
-{% endfor %}{% endif %}
-{% if weaknesses %}## Areas of Concern
-{% for item in weaknesses %}- {{ item }}
-{% endfor %}{% endif %}
-{% if suggestions %}## Recommendations
-{% for item in suggestions %}{{ loop.index }}. {{ item }}
-{% endfor %}{% endif %}
----
-*Generated by ArchLens Repository Intelligence*
-</textarea>
-
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function copyReportLink() {
-        const markdown = document.getElementById('markdown-export').value;
-        navigator.clipboard.writeText(markdown).then(() => {
-            const txt = document.getElementById('share-btn-text');
-            const orig = txt.textContent;
-            txt.textContent = 'Copied Markdown!';
-            setTimeout(() => { txt.textContent = orig; }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy Markdown: ', err);
-            // Fallback for older browsers
-            const textarea = document.getElementById('markdown-export');
-            textarea.style.display = 'block';
-            textarea.select();
-            document.execCommand('copy');
-            textarea.style.display = 'none';
-            const txt = document.getElementById('share-btn-text');
-            const orig = txt.textContent;
-            txt.textContent = 'Copied Markdown!';
-            setTimeout(() => { txt.textContent = orig; }, 2000);
-        });
-    }
-</script>
 {% endblock %}

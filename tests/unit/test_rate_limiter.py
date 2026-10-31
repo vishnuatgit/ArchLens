@@ -45,3 +45,19 @@ def test_refused_requests_do_not_extend_the_wait():
 def test_non_positive_limit_disables_limiting():
     limiter = SlidingWindowRateLimiter(max_events=0, window_seconds=60)
     assert all(limiter.hit("a") is None for _ in range(100))
+
+
+def test_refund_gives_back_the_latest_event():
+    clock = FakeClock()
+    limiter = SlidingWindowRateLimiter(max_events=1, window_seconds=60, clock=clock)
+
+    assert limiter.hit("a") is None
+    assert limiter.hit("a") is not None
+    limiter.refund("a")
+    assert limiter.hit("a") is None
+
+
+def test_refund_of_an_unknown_client_is_harmless():
+    limiter = SlidingWindowRateLimiter(max_events=1, window_seconds=60)
+    limiter.refund("nobody")
+    assert limiter.hit("nobody") is None

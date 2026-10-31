@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+
+{% block title %}About &mdash; ArchLens{% endblock %}
+{% block meta_description %}What ArchLens is for, how it is built, the design decisions behind it and its limitations.{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/pages.css?v={{ asset_version }}" />
+{% endblock %}
+
+{% block content %}
+
+<header class="page-header">
+    <div class="page-title-wrap">
+        <span class="page-title-icon">{{ ui.icon("info") }}</span>
+        <h1>About ArchLens</h1>
+    </div>
+    <p>
+        A FastAPI web app, a REST API and a CLI that share one service layer, backed by the
+        GitHub REST API and SQLite.
+    </p>
+</header>
+
+<div class="about-layout">
+<nav class="card about-toc" aria-label="On this page">
+    <p class="side-title">On this page</p>
+    <ul>
+        <li><a href="#problem-title">The problem it solves</a></li>
+        <li><a href="#arch-title">Architecture</a></li>
+        <li><a href="#stack-title">Tech stack</a></li>
+        <li><a href="#decisions-title">Key design decisions</a></li>
+        <li><a href="#limits-title">Limitations</a></li>
+        <li><a href="#author-title">Who built it</a></li>
+    </ul>
+    <div class="toc-links">
+        <a href="/scoring">{{ ui.icon("ruler") }}How scoring works</a>
+        <a href="/docs">{{ ui.icon("api") }}REST API docs</a>
+        <a href="{{ site.repo_url }}" rel="noopener">{{ ui.icon("github") }}Source on GitHub</a>
+    </div>
+</nav>
+
+<div class="about">
+    <section class="card about-section" aria-labelledby="problem-title">
+        <h2 id="problem-title" class="about-title">The problem it solves</h2>
+        <div class="prose">
+            <p>
+                Before you depend on a library or contribute to a project, you usually click around its repository
+                for a while. Is there a license? Tests? CI? When was the last commit? How many issues are open?
+            </p>
+            <p>
+                ArchLens runs that checklist in one request, scores it out of 100 and explains every point, so the
+                result is something you can check rather than take on trust. It is useful for choosing a dependency,
+                sizing up a project before contributing, or finding the gaps in your own repository.
+            </p>
+        </div>
+    </section>
+
+    <section class="card about-section" aria-labelledby="arch-title">
+        <h2 id="arch-title" class="about-title">Architecture</h2>
+        <figure class="arch">
+            <div class="arch-row arch-three">
+                <div class="arch-box">
+                    <span class="arch-icon">{{ ui.icon("search") }}</span>
+                    <span class="arch-name">Web pages</span>
+                    <span class="arch-note">FastAPI + Jinja templates, one small JavaScript file</span>
+                </div>
+                <div class="arch-box">
+                    <span class="arch-icon">{{ ui.icon("api") }}</span>
+                    <span class="arch-name">REST API</span>
+                    <span class="arch-note mono">/api/v1, progress streamed as JSON lines</span>
+                </div>
+                <div class="arch-box">
+                    <span class="arch-icon">{{ ui.icon("code") }}</span>
+                    <span class="arch-name">CLI</span>
+                    <span class="arch-note mono">archlens analyze</span>
+                </div>
+            </div>
+            <div class="arch-arrow" aria-hidden="true"></div>
+            <div class="arch-row">
+                <div class="arch-box arch-core">
+                    <span class="arch-name mono">AnalysisService</span>
+                    <span class="arch-note">validate input &rarr; reuse a recent report &rarr; rate-limit &rarr; fetch &rarr; score &rarr; store, reporting each step</span>
+                </div>
+            </div>
+            <div class="arch-arrow" aria-hidden="true"></div>
+            <div class="arch-row arch-three">
+                <div class="arch-box">
+                    <span class="arch-name mono">GitHubService</span>
+                    <span class="arch-note">one shared async HTTP client, retries on transient errors</span>
+                    <span class="arch-ext">{{ ui.icon("github", "icon icon-xs") }}GitHub REST API</span>
+                </div>
+                <div class="arch-box">
+                    <span class="arch-name mono">MetricsService</span>
+                    <span class="arch-note">scoring rules as constants; no I/O</span>
+                </div>
+                <div class="arch-box">
+                    <span class="arch-name mono">RepositoryService</span>
+                    <span class="arch-note">SQLAlchemy models, Alembic migrations</span>
+                    <span class="arch-ext">{{ ui.icon("database", "icon icon-xs") }}SQLite</span>
+                </div>
+            </div>
+            <figcaption>
+                Every entry point calls the same service layer. Only <code>GitHubService</code> talks to GitHub,
+                and analyses are stored through <code>RepositoryService</code>. Dashed boxes are external systems.
+                Each user and system flow is written up, with diagrams, in
+                <a href="{{ site.repo_url }}/blob/main/docs/process-flows.md" rel="noopener">docs/process-flows.md</a>.
+            </figcaption>
+        </figure>
+    </section>
+
+    <section class="card about-section" aria-labelledby="stack-title">
+        <h2 id="stack-title" class="about-title">Tech stack</h2>
+        <table class="table stack-table">
+            <tbody>
+                <tr><th scope="row">Language</th><td>Python 3.11+</td></tr>
+                <tr><th scope="row">Web framework</th><td>FastAPI (async), server-rendered Jinja2 templates</td></tr>
+                <tr><th scope="row">GitHub client</th><td>httpx <code>AsyncClient</code>, calls run concurrently with <code>asyncio.gather</code></td></tr>
+                <tr><th scope="row">Storage</th><td>SQLite through SQLAlchemy 2, schema migrations with Alembic</td></tr>
+                <tr><th scope="row">Command line</th><td>Typer and Rich</td></tr>
+                <tr><th scope="row">Front end</th><td>Plain CSS, inline SVG charts and one vanilla JavaScript file; no build step</td></tr>
+                <tr><th scope="row">Quality</th><td>pytest with GitHub mocked, Ruff, Black, GitHub Actions</td></tr>
+                <tr><th scope="row">Deployment</th><td>Multi-stage Docker image running as a non-root user; Render Blueprint</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card about-section" aria-labelledby="decisions-title">
+        <h2 id="decisions-title" class="about-title">Key design decisions</h2>
+        <ol class="decisions">
+            <li>
+                <h3>One shared HTTP client</h3>
+                <p>
+                    A single <code>httpx.AsyncClient</code> is opened when the app starts and closed when it stops.
+                    The six GitHub requests of an analysis run concurrently and reuse its pooled connections
+                    instead of each paying for a new TLS handshake.
+                </p>
+            </li>
+            <li>
+                <h3>Real progress, not a timer</h3>
+                <p>
+                    The analysis reports each step to a callback. <code>POST /api/v1/analyze/stream</code> forwards
+                    those events as newline-delimited JSON, and the home page lights up its &ldquo;How it works&rdquo;
+                    steps as each GitHub call finishes. A report&rsquo;s &ldquo;Analyze again&rdquo; runs through the
+                    same steps. Without JavaScript the form still posts normally.
+                </p>
+            </li>
+            <li>
+                <h3>Protecting the GitHub quota</h3>
+                <p>
+                    Asking for the same repository and profile again within {{ cache_minutes }} minutes reuses the
+                    stored report, and that reuse is free. Each visitor can start {{ rate_limit }} new {{ "analysis" if rate_limit == 1 else "analyses" }} per {{ rate_window_minutes }}
+                    minutes (a sliding window keyed by IP); one that fails because GitHub is down or out of quota is
+                    given back. When one GitHub call fails, the others are cancelled. The badge never calls GitHub,
+                    and the compare page uses stored reports first.
+                </p>
+            </li>
+            <li>
+                <h3>Seeded example reports</h3>
+                <p>
+                    The free hosting tier wipes the disk on every restart, which would greet visitors with an empty
+                    site. Real analyses captured earlier are bundled with the app and loaded into an empty database,
+                    labelled with the date they were captured.
+                </p>
+            </li>
+            <li>
+                <h3>Scoring rules as data</h3>
+                <p>
+                    Every point value, threshold and file name is a named constant. The scorer applies them, the
+                    <a href="/scoring">scoring page</a> renders them, and each report lines its findings up with the same
+                    checks. Tests run the real scorer against both, so the explanation cannot drift from the code.
+                </p>
+            </li>
+            <li>
+                <h3>One error vocabulary</h3>
+                <p>
+                    Each failure (bad input, unknown repository, empty repository, rate limits, GitHub outages) is an
+                    exception class with its own HTTP status and error code. The API returns them as JSON, the
+                    progress stream sends them as an error event, and the pages show the same message next to the form.
+                </p>
+            </li>
+        </ol>
+    </section>
+
+    <section class="card about-section" aria-labelledby="limits-title">
+        <h2 id="limits-title" class="about-title">Limitations</h2>
+        <ul class="plain-list limits">
+            <li><strong>Metadata only.</strong> ArchLens reads repository statistics and the root file listing. It does not read source files, run tests or measure coverage.</li>
+            <li><strong>Heuristics, not ground truth.</strong> A file earns points by existing, whatever its quality, and stars are a weak proxy for health. Read a low score as a list of things to look at.</li>
+            <li><strong>Capped counts.</strong> Contributors and recent commits come from one page of GitHub results, so they stop at {{ api_page_cap }}.</li>
+            <li><strong>Single instance.</strong> The rate limiter lives in memory, resets on restart and trusts the <code>X-Forwarded-For</code> header, which a determined client can forge.</li>
+            <li><strong>Renames are learned, not looked up.</strong> An old name of a renamed repository finds the new one&rsquo;s reports only after someone has analyzed it under the old name once.</li>
+            <li><strong>Ephemeral demo storage.</strong> On the free host the SQLite file resets when the service restarts. Example reports come back; other reports, and the badges that point at them, return after someone analyzes the repository again.</li>
+            <li><strong>GitHub limits.</strong> Without a token GitHub allows 60 requests an hour, about ten analyses.</li>
+        </ul>
+    </section>
+
+    <section class="card about-section author" aria-labelledby="author-title">
+        <h2 id="author-title" class="about-title">Who built it</h2>
+        <p>
+            Designed and built by <a href="{{ site.portfolio_url }}" rel="noopener">{{ site.author }}</a>.
+            The source, tests and deployment config are on <a href="{{ site.repo_url }}" rel="noopener">GitHub</a>,
+            and the REST API is documented at <a href="/docs">/docs</a>.
+        </p>
+    </section>
+</div>
+</div>
+
+{% endblock %}

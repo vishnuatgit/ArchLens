@@ -1,14 +1,14 @@
 [project]
 name = "archlens"
 version = "0.1.0"
-description = "Repository Intelligence Platform — automated engineering health scoring for GitHub repositories."
+description = "Engineering health scores for public GitHub repositories: web app, REST API and CLI."
 requires-python = ">=3.11"
 license = "MIT"
 authors = [
     { name = "Vishnu" }
 ]
 dependencies = [
-    "fastapi>=0.111.0",
+    "fastapi>=0.118.0",
     "uvicorn>=0.30.1",
     "pydantic>=2.7.4",
     "pydantic-settings>=2.3.3",

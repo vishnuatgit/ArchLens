@@ -18,3 +18,8 @@ services:
         sync: false
       - key: LOG_LEVEL
         value: INFO
+      # Render's proxy terminates HTTPS. Trusting its X-Forwarded-Proto header lets uvicorn
+      # report the real https scheme, so shared report links and README badge snippets use
+      # https://. Only Render's proxy can reach the container, so trusting it is safe here.
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"

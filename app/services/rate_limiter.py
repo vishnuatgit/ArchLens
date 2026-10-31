@@ -49,6 +49,15 @@ class SlidingWindowRateLimiter:
             self._forget_idle(cutoff)
         return None
 
+    def refund(self, key: str) -> None:
+        """
+        Gives back the client's most recent event, for work that failed through no
+        fault of the client (for example GitHub being down), so a retry is allowed.
+        """
+        events = self._events.get(key)
+        if events:
+            events.pop()
+
     def _forget_idle(self, cutoff: float) -> None:
         idle = [key for key, events in self._events.items() if not events or events[-1] <= cutoff]
         for key in idle:

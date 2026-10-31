@@ -1,308 +1,116 @@
 # ArchLens
 
-Score the engineering health of any public GitHub repository from 0 to 100, with clear strengths, concerns and next steps.
+**Scores any public GitHub repo's engineering health out of 100 and says what to fix first.**
+
+A FastAPI web app, REST API and CLI. It reads a repository's metadata through the GitHub REST API (it never clones code), scores it across seven dimensions, explains every point, and stores every new analysis in SQLite so reports can be revisited, compared and shared.
 
 [![CI](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-ArchLens is a FastAPI web app, REST API and CLI. It reads a repository's metadata through the GitHub REST API (it never clones code), scores it across seven dimensions, and stores every run in SQLite so you can revisit past reports.
+**Live demo:** not deployed yet, so [run it locally](#run-locally) in a minute · REST API docs at `/docs` · [How it works](#how-it-works) · [Process flows](docs/process-flows.md)
+
+![ArchLens report for pallets/werkzeug: a score gauge at 85 out of 100, grade A, an executive summary with 13 points within reach, and repository facts such as stars, last push and CI workflows](docs/screenshots/report.png)
+
+<p>
+  <img src="docs/screenshots/home.png" alt="ArchLens home page: the analysis form, the How it works steps that light up during an analysis, and an example report" width="72%" />
+  <img src="docs/screenshots/report-mobile.png" alt="The same report on a phone, in the light theme" width="24%" />
+</p>
+
+Checking a repository by hand (license? tests? CI? recent commits? open issues?) means ten minutes of clicking around. ArchLens runs that checklist in one request, shows the evidence behind every point, and turns what is missing into a prioritised list of fixes.
+
+It is built to run on a free host such as Render's free tier, where the first visit after a quiet spell is slow while the service wakes up and the database resets when the service restarts. Three example reports (`psf/requests`, `pallets/flask` and this repository) are then loaded again, labelled with the date they were captured, so the site is never empty.
 
 ---
 
-## Live Demo
+## Features
 
-**[Open the live demo](https://TODO-render-url.onrender.com)** <!-- TODO: replace with the Render URL after the first deploy -->
+- **Score and grade.** A 0–100 score across seven dimensions (documentation, activity, organization, community, maintainability, security, code quality), a letter grade from A+ to F, a health tier and a one-paragraph summary.
+- **Live progress.** The home page's "How it works" steps (fetch, check 7 dimensions, score, suggest) light up as the analysis runs, driven by real events streamed from the server as each of the six GitHub calls finishes. A reused report is marked as reused rather than re-run, a failed step says why ("Repository not found", "GitHub did not answer"), and a slow GitHub is announced. A report's "Analyze again" runs through the same live steps.
+- **Evidence for every point.** Each dimension opens to show its checks: passed, partial, missing, given or not scored, with what the scorer found (for example "Found 8 GitHub Actions workflow(s).") and the points earned.
+- **What to fix first, with points.** Every missing check becomes a fix with the points it would add (`+4` for adding a file, "up to +6" for things like commit activity), exact fixes first, and the score and grade they would lead to. Copy it as a Markdown checklist.
+- **Charts from real data.** A score gauge, a radar chart of the dimension profile, dimension bars, a language bar in GitHub's language colours, and a score history when a repository has been analyzed more than once.
+- **Compare two repositories** side by side at `/compare?a=owner/repo&b=owner/repo`: overlaid radar charts, a dimension table with differences, and each one's top fixes. Stored reports are reused, so comparing known repositories costs no GitHub requests.
+- **Share.** Copy a link, use the stable `/repo/{owner}/{repo}` permalink, export Markdown (copy, download or `GET /api/v1/analyses/{id}/markdown`), or add a README badge (`/badge/{owner}/{repo}.svg?profile=…`, never calls GitHub) with Markdown, HTML or URL snippets.
+- **Renamed repositories.** GitHub follows renames and transfers; ArchLens stores the report under the new name and remembers the old one, so the old name's permalink, badge and reuse window still find it.
+- **History** of every stored report, searchable by name, filterable by profile and sortable by date, score or name.
+- **Scoring you can check.** The `/scoring` page lists every check, the files it looks for and its points under each profile. It is generated from the scorer's own constants, and tests run the real scorer against it and against the report's evidence, so the explanation cannot drift from the code.
+- **Three profiles.** *Library* applies every check; *Personal* skips checks that mostly matter for shared projects; *Enterprise* does not judge popularity.
+- **Web app, REST API and CLI** on one service layer. `archlens analyze psf/requests` prints the same report in a terminal.
+- **Built for a free host.** A report of the same repository and profile from the last hour is reused, each visitor can start 5 new analyses per 10 minutes (with a countdown in the UI; an analysis that fails because GitHub is down or out of quota is given back), a failed GitHub call cancels the rest, and bundled example reports refill an empty database.
+- **Polished front end, no build step.** Dark and light themes (following the system setting until you pick one), keyboard access and visible focus, screen-reader announcements for progress and copy actions, reduced-motion support, and layouts from 360 px phones to wide screens. The form still works without JavaScript.
 
-Paste `owner/repo` (for example `psf/requests`) or a full GitHub URL. The REST API's interactive docs are at `/docs` on the same host.
-
-The demo runs on Render's free tier, so:
-- the first visit after a quiet spell is slow while the service wakes up;
-- its database resets whenever the service restarts, after which three example reports (`psf/requests`, `pallets/flask` and this repository) are loaded again, labelled with the date they were captured;
-- to share the GitHub API quota fairly, each visitor can start 5 new analyses per 10 minutes, and asking for the same repository and profile again within an hour reuses the existing report.
-
----
-
-## Key Features
-
-- **Multi-Dimensional Codebase Scoring**: Calculates an overall engineering health score (0–100) across 7 dimensions:
-  - **Documentation**: README architecture overview, LICENSE permissions, CONTRIBUTING guidelines, and dedicated `docs/` directories.
-  - **Activity & Velocity**: Commit frequency over 30 days and days since last release/push.
-  - **Organization**: Dedicated source folders (`src/`, `app/`), test suites (`tests/`), and environment configuration manifests (`pyproject.toml`, `dockerfile`, `.env`).
-  - **Community Engagement**: GitHub stars, forks, and unique active contributor base.
-  - **Maintainability & CI/CD**: GitHub Actions workflows (`.github/workflows/`), open issue count, and repository size.
-  - **Security**: `.gitignore`, a dependency lockfile, an `.env` template, and a `SECURITY.md` policy.
-  - **Code Quality & Tooling**: linter/formatter config, type-checker config, and pre-commit hooks.
-
-- **Personalized Repository Profiles**:
-  - **Open Source Library**: Standard strict scoring across all 7 dimensions.
-  - **Personal Project**: Curved scoring that automatically forgives missing CI/CD workflows, low star/fork counts, and `CONTRIBUTING.md` guides.
-  - **Enterprise App**: Strictly evaluates test coverage and CI/CD automation while bypassing public community metrics.
-
-- **Modern Dark Glassmorphic Dashboard**:
-  - Built with raw CSS, Plus Jakarta Sans typography, ambient radial glow spheres, and backdrop blur glassmorphism.
-  - SVG circular score gauge with health tier badges: *Strong Codebase* (70+), *Moderate Health* (40-69) and *Needs Optimization* (below 40). The same tiers drive the executive summary, the history badges and the CLI.
-  - 6-tile frosted metadata strip (Stars, Forks, Open Issues, Contributors, Disk Size, Languages).
-  - Multi-segment language distribution bars and categorised findings (Key Strengths, Areas of Concern, Actionable Recommendations).
-
-- **Live Asynchronous GitHub Integration**: Async HTTP client (`httpx`) using `asyncio.gather()` to concurrently fetch live repository data, contents, workflows, languages, and commit history.
-- **SQLite + Alembic Migration Engine**: Persistent storage for all historical analyses with versioned database migrations and dependency injection.
-- **Tested**: unit and integration tests with Pytest and FastAPI's TestClient; GitHub API calls are mocked, so tests need no network.
-- **Containerized**: multi-stage Docker build on `python:3.11-slim`, running as a non-root user with a health check.
-- **CLI**: `archlens analyze <url> --profile personal` prints the same report in the terminal.
-
----
-
-## Architecture Diagram
+## How it works
 
 ```mermaid
-graph TD
-    Client["Client Browser / HTTP"]
-
-    subgraph Application Layer
-        MW["Middleware (Logging & Latency)"]
-        Router["Web Routers (app/routers/web.py)"]
-        DI["Dependency Injection (app/dependencies.py)"]
-    end
-
-    subgraph Business Logic Layer
-        AS["AnalysisService (app/services/analysis_service.py)"]
-        MS["MetricsService (app/services/metrics_service.py)"]
-        GHS["GitHubService (app/services/github_service.py)"]
-        RS["RepositoryService (app/services/repository_service.py)"]
-    end
-
-    subgraph Data & External Services
-        GHAPI["GitHub REST API v3"]
-        DB[("SQLite Database")]
-        Alembic["Alembic Migration Engine"]
-    end
-
-    Client --> MW
-    MW --> Router
-    Router --> DI
-    DI --> AS
-    AS -->|Async Parallel Fetch| GHS
-    GHS -->|HTTP Requests| GHAPI
-    AS -->|Compute Health Score| MS
-    AS -->|Persist Results| RS
-    RS -->|SQLAlchemy ORM| DB
-    Alembic -->|Schema Versioning| DB
+flowchart TD
+    IN["Web form, REST API or CLI<br/>owner/repo or a GitHub URL"] --> V["Validate and normalise the input"]
+    V --> C{"Same repository and profile<br/>analyzed in the last hour?"}
+    C -- yes --> R["Report page"]
+    C -- no --> L["Per-visitor rate limit"]
+    L --> F["Fetch repo metadata<br/>6 read-only GitHub API calls, run concurrently"]
+    F --> S["Check 7 dimensions, then score and grade<br/>(MetricsService, rules as constants)"]
+    S --> DB[("SQLite")]
+    DB --> R
+    R --> N["Evidence per check, fixes with points,<br/>Markdown export, README badge, compare"]
+    F -. progress events .-> UI["Home page pipeline<br/>(POST /api/v1/analyze/stream)"]
+    S -. progress events .-> UI
 ```
 
----
+1. **Fetch repo metadata.** `GitHubService` reads repository stats, the root file listing, languages, contributors, commits from the last 30 days and the workflow folder, using one shared `httpx.AsyncClient` and `asyncio.gather` (if one call fails, the others are cancelled). It never clones the repository or downloads source files.
+2. **Check 7 dimensions.** `MetricsService` looks for things like a README, license, test folder, CI workflows, lockfile, `SECURITY.md`, linter and type-checker config, recent commits and open issues.
+3. **Score and grade.** Points add up to 100 and map to a grade (A+ is 95 and above, F is below 35) and a tier (Strong Codebase, Moderate Health, Needs Optimization).
+4. **Suggest next steps.** Each failed check adds a finding and, where there is an obvious fix, a recommendation. The report lines every finding up with its check and ranks the fixes by the points they add.
 
-## Data Schemas & Entity Relationship Diagram
+`AnalysisService.run()` reports each step to a progress callback; `POST /api/v1/analyze/stream` forwards those events to the browser as newline-delimited JSON. Every user and system flow, with diagrams, files, functions and error paths, is described in **[docs/process-flows.md](docs/process-flows.md)**.
 
-```mermaid
-erDiagram
-    REPOSITORIES ||--o{ ANALYSES : "has many"
-    ANALYSES ||--|| METRICS : "has one"
+## Tech stack
 
-    REPOSITORIES {
-        int id PK
-        string owner
-        string name
-        string url UK
-        datetime created_at
-    }
+| Layer | Choice |
+| :--- | :--- |
+| Language | Python 3.11+ |
+| Web framework | FastAPI (async), server-rendered Jinja2 templates |
+| GitHub client | httpx `AsyncClient`, shared for the app's lifetime |
+| Storage | SQLite via SQLAlchemy 2, migrations with Alembic |
+| CLI | Typer and Rich |
+| Front end | Plain CSS, inline SVG charts and one vanilla JavaScript file, no build step |
+| Quality | pytest (GitHub mocked, no network), Ruff, Black, GitHub Actions |
+| Deployment | Multi-stage Docker image running as a non-root user, Render Blueprint |
 
-    ANALYSES {
-        int id PK
-        int repository_id FK
-        int score
-        float duration
-        string repo_type
-        datetime created_at
-    }
+## Run locally
 
-    METRICS {
-        int id PK
-        int analysis_id FK
-        int stars
-        int forks
-        int open_issues
-        int language_count
-        int contributor_count
-        int repo_size
-        datetime last_pushed
-        string languages_json
-        string score_breakdown_json
-        string strengths_json
-        string weaknesses_json
-        string suggestions_json
-    }
-```
+Requires Python 3.11 or newer.
 
----
-
-## Project Structure
-
-```text
-ArchLens/
-├── main.py                 # FastAPI application entry point
-├── pyproject.toml          # PEP 621 project configuration & tool settings
-├── app/
-│   ├── config.py               # Environment configuration settings
-│   ├── dependencies.py         # FastAPI dependency injection providers
-│   ├── exceptions.py           # Custom application exception hierarchy
-│   ├── models/                 # SQLAlchemy database models (Repository, Analysis, Metric)
-│   ├── repositories/           # DB session management & DAO queries
-│   ├── routers/                # FastAPI web routes (/, /analyze, /analysis/{id}, /history, /health)
-│   ├── schemas/                # Pydantic validation schemas
-│   ├── services/               # GitHub API client, scoring engine, analysis orchestrator, rate limiter & example seeding
-│   ├── seed/examples.json      # Example reports loaded into an empty database on startup
-│   ├── templating.py           # Shared Jinja2 environment and display filters
-│   ├── templates/              # Jinja2 HTML templates (base, home, results, history, 404)
-│   └── static/                 # Glassmorphic CSS design system, favicon & assets
-├── alembic/                    # Database migration scripts
-├── scripts/
-│   ├── build_examples.py       # Regenerates app/seed/examples.json from live analyses
-│   └── seed.py                 # Script to seed live repository analysis data
-├── tests/                      # Pytest unit & integration test suites
-│   ├── unit/                   # Unit tests for services and parsers
-│   └── integration/            # Integration tests for web routes and DB
-├── Dockerfile                  # Multi-stage production container build
-├── alembic.ini                 # Alembic migration configuration
-├── requirements.txt            # Runtime dependencies (installed in the Docker image)
-├── requirements-dev.txt        # Test and lint tools (pytest, ruff, black)
-└── README.md                   # Project documentation
-```
-
----
-
-## Quick Start Guide
-
-### Prerequisites
-- **Python 3.11+**
-- **Git**
-
-### 1. Clone the Repository
 ```bash
 git clone https://github.com/vishnuatgit/ArchLens.git
 cd ArchLens
-```
 
-### 2. Create & Activate Virtual Environment
-```bash
-# On Linux/macOS
-python3 -m venv .venv
-source .venv/bin/activate
-
-# On Windows (PowerShell)
 python -m venv .venv
-.venv\Scripts\activate
-```
+source .venv/bin/activate          # Windows (PowerShell): .venv\Scripts\activate
 
-### 3. Install Dependencies
-```bash
-pip install -r requirements.txt       # to run the app
-pip install -r requirements-dev.txt   # to also run the tests and linters
-```
+pip install -r requirements.txt    # the app
+pip install -e .                   # optional: the `archlens` command
 
-### 4. Run Database Migrations
-Initialize the SQLite database schema using Alembic:
-```bash
-alembic upgrade head
-```
-
-### 5. (Optional) Configure GitHub Personal Access Token
-Setting a GitHub Token increases your GitHub API rate limit from 60 to 5,000 requests per hour:
-```bash
-# On Linux/macOS
-export GITHUB_TOKEN="your_personal_access_token"
-
-# On Windows (PowerShell)
-$env:GITHUB_TOKEN="your_personal_access_token"
-```
-
-### 6. Launch the FastAPI Development Server
-```bash
+alembic upgrade head               # create the SQLite schema
 uvicorn main:app --reload
 ```
-Open your browser and navigate to **[http://127.0.0.1:8000](http://127.0.0.1:8000)**. On first start the empty database is filled with the example reports from `app/seed/examples.json` (set `SEED_EXAMPLES=false` to skip this).
 
----
+Open <http://127.0.0.1:8000>. On first start the empty database is filled with the example reports from `app/seed/examples.json` (set `SEED_EXAMPLES=false` to skip this).
 
-## Seeding Live Data
-
-To pre-populate the database with live analysis runs from popular public repositories (e.g. `octocat/Hello-World`, `fastapi/fastapi`, `pallets/flask`):
+Without a token GitHub allows 60 API requests per hour, about ten analyses. A token raises that to 5,000:
 
 ```bash
-python scripts/seed.py
+export GITHUB_TOKEN="your_token"       # Windows (PowerShell): $env:GITHUB_TOKEN="your_token"
 ```
 
-The example reports bundled with the app are regenerated with `python scripts/build_examples.py`, which analyzes the repositories listed in that script (about six GitHub API calls each) and rewrites `app/seed/examples.json`.
-
----
-
-## API Reference
-
-### Web Dashboard Routes
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/` | Home page with URL input form, profile selector, and recent scans |
-| `POST` | `/analyze` | Form submission endpoint to trigger full repository analysis |
-| `GET` | `/analysis/{id}` | Detailed engineering report dashboard for a specific scan ID |
-| `GET` | `/history` | Paginated analysis history page |
-| `GET` | `/health` | System health check endpoint returning API status |
-
-### REST API v1 JSON Endpoints
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/v1/analyze` | Analyzes a repository from a JSON body (`{"url": "owner/repo", "repo_type": "library"}`). Returns `201` with a new report, or `200` when a report of the same repository and profile from the last hour is reused |
-| `GET` | `/api/v1/analyses/{id}` | Fetches full structured JSON analysis report, health grade, and breakdown |
-| `GET` | `/api/v1/analyses` | Paginated query list with filtering (`?offset=0&limit=20&min_score=80&repo_type=library`) |
-| `GET` | `/api/v1/health` | REST API operational status health check |
-
-> **Interactive API Documentation**: Access Swagger UI at `http://127.0.0.1:8000/docs` and ReDoc at `http://127.0.0.1:8000/redoc`.
-
-Errors use one JSON shape, `{"error": "...", "error_code": "...", "status_code": 404}`:
-
-| Status | `error_code` | When |
-| :--- | :--- | :--- |
-| `400` | `INVALID_URL` | The input is not `owner/repo` or a GitHub repository URL |
-| `404` | `REPO_NOT_FOUND` | The repository does not exist or is private |
-| `422` | `EMPTY_REPOSITORY` | The repository has no commits yet (an unknown `repo_type` is also a `422` request validation error) |
-| `429` | `TOO_MANY_ANALYSES` | The client started too many analyses; see the `Retry-After` header |
-| `502` | `GITHUB_UNAVAILABLE` | GitHub returned an unexpected error or could not be reached |
-| `503` | `RATE_LIMIT_EXCEEDED` | The server's GitHub API quota is used up |
-
----
-
-## Running Tests
-
-ArchLens maintains a robust test suite covering services, web routes, and database operations.
-
-Run all tests with Pytest, and the same lint checks as CI:
-```bash
-pip install -r requirements-dev.txt
-pytest --cov=app tests/
-ruff check app tests
-black --check app tests
-```
-
----
-
-## Docker Deployment
-
-To build and run the multi-stage production Docker container:
+From the command line:
 
 ```bash
-# 1. Build Docker Image
-docker build -t archlens:latest .
-
-# 2. Run Container
-docker run -d -p 8000:8000 --name archlens-app archlens:latest
+archlens analyze psf/requests
+archlens analyze https://github.com/pallets/flask --profile personal
 ```
 
-Access the containerized app at `http://localhost:8000`. The container applies Alembic migrations on start-up, and honours a `PORT` environment variable. Pass `-e GITHUB_TOKEN=...` to raise the GitHub rate limit.
-
----
-
-## Configuration
+### Configuration
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
@@ -314,9 +122,20 @@ Access the containerized app at `http://localhost:8000`. The container applies A
 | `ANALYSIS_RATE_WINDOW_SECONDS` | `600` | Length of that rate-limit window |
 | `SEED_EXAMPLES` | `true` | Load the example reports into an empty database on startup |
 
-Copy `.env.example` to `.env` to set these locally.
+Copy `.env.example` to `.env` to set these locally. `python scripts/build_examples.py` regenerates the bundled example reports from live analyses.
 
----
+## Tests
+
+The same checks CI runs:
+
+```bash
+pip install -r requirements-dev.txt
+pytest --cov=app tests/
+ruff check app tests
+black --check app tests
+```
+
+Unit tests cover the scorer, the scoring page generator (it runs the real scorer against the page's numbers), the report evidence (it runs the real scorer over about 900 generated repositories and checks every dimension adds up), the fix plan, the progress events, cancelling the other GitHub calls when one fails, the charts, the badge, the Markdown export, the GitHub client, the rate limiter (including refunds) and the CLI. Integration tests drive every page and API endpoint, including the progress stream, renamed repositories, the "Analyze again" hand-off and the error states, through FastAPI's `TestClient` with GitHub mocked, so the suite needs no network.
 
 ## Deploy on Render
 
@@ -325,12 +144,13 @@ Copy `.env.example` to `.env` to set these locally.
 1. Create a GitHub token for the API quota: GitHub > Settings > Developer settings > Fine-grained tokens, with **Public repositories (read-only)** access and no extra permissions. ArchLens only reads public data, so the token needs nothing else.
 2. In Render, choose **New > Blueprint** and select this repository. Render reads `render.yaml`.
 3. When prompted, paste the token as the value of `GITHUB_TOKEN`. It is stored in Render, never in the repository.
-4. After the first deploy, put the service URL in the **Live Demo** link above.
+4. After the first deploy, link the service URL as the **Live demo** at the top of this README.
 
 | Variable | Set by | Notes |
 | :--- | :--- | :--- |
 | `GITHUB_TOKEN` | You, in the Render dashboard (`sync: false`) | Raises the GitHub limit from 60 to 5,000 requests per hour |
 | `LOG_LEVEL` | `render.yaml` | `INFO` |
+| `FORWARDED_ALLOW_IPS` | `render.yaml` | `*`: trust Render's proxy headers so share links and badge snippets use `https://` |
 | `PORT` | Render | Read by the container's start command |
 
 The other settings in [Configuration](#configuration) keep their defaults unless you add them in the dashboard.
@@ -340,15 +160,95 @@ Free-tier caveats:
 - SQLite lives on the container's ephemeral disk, so analysis history resets on every redeploy or restart; the example reports are then loaded again. Use a managed database through `DATABASE_URL` if you need history to persist.
 - The per-visitor limit is kept in memory, so it resets on restart, and it trusts the first `X-Forwarded-For` address, which a determined client can forge. The GitHub token's quota and the one-hour reuse window are the backstop.
 
----
+To run the same image elsewhere:
+
+```bash
+docker build -t archlens .
+docker run -p 8000:8000 -e GITHUB_TOKEN=your_token archlens
+```
+
+## API overview
+
+Interactive documentation: Swagger UI at `/docs`, ReDoc at `/redoc`.
+
+| Method | Endpoint | Returns |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/analyze` | Analyzes `{"url": "owner/repo", "repo_type": "library"}`. `201` with a new report, or `200` when a report of the same repository and profile from the last hour is reused |
+| `POST` | `/api/v1/analyze/stream` | The same analysis, streaming its progress as newline-delimited JSON (`validate`, `reuse`, `fetch` per GitHub call, `analyze`, `score`, `save`), then a `done` event with the report's address or an `error` event with the codes below |
+| `GET` | `/api/v1/analyses/{id}` | The full report as JSON |
+| `GET` | `/api/v1/analyses/{id}/markdown` | The report as Markdown (`text/markdown`), with the fixes and the points they add |
+| `GET` | `/api/v1/analyses` | Paginated list, filterable: `?offset=0&limit=20&min_score=80&repo_type=library` |
+| `GET` | `/api/v1/health` | API status |
+| `GET` | `/badge/{owner}/{repo}.svg` | README badge from stored results only (`?profile=` optional) |
+| `GET` | `/health` | Service health check |
+
+Web pages: `/` (analyze), `/analysis/{id}` (report), `/analysis/{id}/report.md` (download), `/repo/{owner}/{repo}` (newest report of a repository), `/compare`, `/history` (`?q=`, `?profile=`, `?sort=newest|oldest|score_high|score_low|name`), `/scoring`, `/about`.
+
+Errors share one JSON shape, `{"error": "...", "error_code": "...", "status_code": 404}`:
+
+| Status | `error_code` | When |
+| :--- | :--- | :--- |
+| `400` | `INVALID_URL` | The input is not `owner/repo` or a GitHub repository URL |
+| `404` | `REPO_NOT_FOUND` | The repository does not exist or is private |
+| `404` | `ANALYSIS_NOT_FOUND` | No stored analysis has that ID |
+| `422` | `EMPTY_REPOSITORY` | The repository has no commits yet (an unknown `repo_type` is also a `422` request validation error) |
+| `429` | `TOO_MANY_ANALYSES` | The client started too many analyses; see the `Retry-After` header |
+| `502` | `GITHUB_UNAVAILABLE` | GitHub returned an unexpected error or could not be reached |
+| `503` | `RATE_LIMIT_EXCEEDED` | The server's GitHub API quota is used up |
+
+## Project structure
+
+```text
+ArchLens/
+├── main.py                     # FastAPI app: routers, error handlers, startup and shutdown
+├── app/
+│   ├── cli.py                  # `archlens analyze` command (Typer + Rich)
+│   ├── config.py               # Settings from environment variables, project links
+│   ├── dependencies.py         # Service singletons and client IP for rate limiting
+│   ├── exceptions.py           # One exception class per failure, with status and error code
+│   ├── formatting.py           # Number and size formatting for pages and exports
+│   ├── templating.py           # Shared Jinja2 environment
+│   ├── models/                 # SQLAlchemy models: Repository, RepositoryAlias, Analysis, Metric
+│   ├── repositories/           # Database engine and sessions
+│   ├── routers/
+│   │   ├── web.py              # HTML pages: analyze, report, compare, history, scoring, about
+│   │   ├── api.py              # REST API v1, including the progress stream
+│   │   └── badge.py            # README badge (stored results only)
+│   ├── schemas/                # Pydantic request and response models
+│   ├── services/
+│   │   ├── analysis_service.py # The pipeline: validate, reuse, rate-limit, fetch, score, store; reports progress
+│   │   ├── github_service.py   # Async GitHub REST client with retries
+│   │   ├── metrics_service.py  # Scoring rules (constants) and the scorer
+│   │   ├── scoring_guide.py    # Builds the /scoring page from those constants
+│   │   ├── evidence.py         # Check-by-check evidence and the fix plan for a stored report
+│   │   ├── charts.py           # Radar chart geometry and language colours
+│   │   ├── report_view.py      # Display-ready report and comparison summary
+│   │   ├── report_export.py    # Markdown export
+│   │   ├── badge_service.py    # SVG badge rendering
+│   │   ├── repository_service.py, rate_limiter.py, seed_service.py
+│   ├── seed/examples.json      # Example reports loaded into an empty database
+│   ├── templates/              # Jinja2 pages and shared macros (_ui.html: icons, gauge, radar)
+│   └── static/                 # CSS, one JavaScript file, favicon
+├── alembic/                    # Database migrations
+├── docs/
+│   ├── process-flows.md        # Every user and system flow, with diagrams
+│   └── screenshots/            # Images used in this README
+├── scripts/                    # Example-report builder and seeding helpers
+├── tests/
+│   ├── unit/                   # Scorer, scoring guide, evidence, charts, badge, export, GitHub client, rate limiter
+│   └── integration/            # Every page, API endpoint and user flow, including the progress stream, GitHub mocked
+├── Dockerfile                  # Multi-stage image, non-root user, health check
+└── render.yaml                 # Render Blueprint
+```
 
 ## Limitations
 
-- Scores are heuristics based on repository metadata and the root directory listing; ArchLens does not read or execute source code.
-- Unauthenticated use is limited to 60 GitHub API requests per hour (each analysis makes about six).
-- Contributor and recent-commit counts come from the first page of results, so they are shown as "100+" at the cap.
-
----
+- **Metadata only.** ArchLens reads repository statistics and the root file listing. It does not read source files, run tests or measure coverage.
+- **Heuristics, not ground truth.** A file earns points by existing, whatever its quality, and stars are a weak proxy for health. Read a low score as a list of things to look at, not a verdict.
+- **Capped counts.** Contributors and recent commits come from one page of GitHub results, so they stop at 100 and show as "100+".
+- **Single instance.** The rate limiter lives in memory and resets on restart.
+- **Renames are learned.** An old repository name finds the new name's reports only after it has been analyzed once under the old name.
+- **Ephemeral demo storage.** On the free host, reports other than the bundled examples (and the badges that point at them) disappear when the service restarts, until someone analyzes the repository again.
 
 ## License
 

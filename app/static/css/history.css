@@ -1,227 +1,80 @@
-/* =========================================================
-   History Page Styles
-   Table Grid, Row Hovers & Profile Pill Badges
-   ========================================================= */
+/* ==========================================================================
+   History: every stored report, filterable by name and profile, sortable
+   ========================================================================== */
 
-.history-title-wrap {
+.history-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
-    margin-bottom: var(--space-1);
+    margin-bottom: var(--space-3);
 }
+.history-search-wrap { flex: 1 1 320px; max-width: 460px; }
+.history-search-wrap .input-kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+.history-search-wrap .input:focus ~ .input-kbd,
+.history-search-wrap .input:not(:placeholder-shown) ~ .input-kbd { opacity: 0; }
+.history-selects { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.select-sm { width: auto; height: 44px; font-size: var(--fs-md); }
+html.js .history-selects .btn { display: none; }
 
-.history-header-icon {
-    width: 28px;
-    height: 28px;
-    stroke: var(--accent-cyan);
-}
+.history-count { margin-bottom: var(--space-4); color: var(--text-3); font-size: var(--fs-sm); }
+.history-count .mono { color: var(--text); }
+.history-count a { margin-left: 6px; }
 
-.search-input-wrap {
-    position: relative;
-    width: 100%;
-    max-width: 420px;
-}
+.history-card { padding: 0; }
+.history-table thead th:first-child { border-top-left-radius: var(--radius-lg); }
+.history-table thead th:last-child { border-top-right-radius: var(--radius-lg); }
+.history-table th:first-child, .history-table td:first-child { padding-left: var(--space-6); }
+.history-table tbody tr { position: relative; }
+.history-table tbody tr:last-child td { border-bottom: 0; }
+.history-table td { padding-top: 14px; padding-bottom: 14px; }
 
-.search-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    stroke: var(--text-muted);
-    pointer-events: none;
-}
+/* The repository link covers the whole row */
+.history-row { display: flex; flex-direction: column; gap: 5px; color: var(--text); }
+.history-row::after { content: ""; position: absolute; inset: 0; }
+.history-row:hover { text-decoration: none; }
+.history-row:focus-visible { outline: none; }
+.history-table tbody tr:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+.history-name { font-weight: 600; font-size: var(--fs-md); overflow-wrap: break-word; }
+.history-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.history-url { color: var(--text-3); font-size: var(--fs-xs); }
+.history-when-sm { display: none; color: var(--text-3); font-size: var(--fs-xs); }
 
-.search-input {
-    padding-left: 40px !important;
-    font-size: 0.9rem;
-}
+.col-score { width: 220px; }
+.score-cell { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; align-items: center; }
+.score-num { font-weight: 600; text-align: right; }
+.score-cell .bar { height: 6px; }
+.history-when { display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
+.history-date { color: var(--text); font-size: var(--fs-sm); }
+.history-time { color: var(--text-3); font-size: var(--fs-xs); }
+.history-ago:not(:empty)::before { content: "\00b7"; margin: 0 6px; }
+.col-chevron { width: 40px; }
+.history-chevron { width: 16px; height: 16px; color: var(--text-3); transition: transform var(--dur-fast), color var(--dur-fast); }
+.history-table tbody tr:hover .history-chevron { transform: translateX(2px); color: var(--accent); }
 
-/* --- Card override for table layout --- */
-.history-card {
-    padding: 0;
-    overflow: hidden;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-}
+.filter-empty { padding: var(--space-6); color: var(--text-2); text-align: center; font-size: var(--fs-md); }
 
-/* --- Table Header Row --- */
-.history-table-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 90px 100px 140px 24px;
-    align-items: center;
-    padding: var(--space-4) var(--space-6);
-    background: var(--bg-surface-solid);
-    border-bottom: 1px solid var(--border-subtle);
-    gap: var(--space-4);
-}
-
-.th {
-    font-family: var(--font-heading);
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
-}
-
-/* --- History List (each row is a link to its report) --- */
-.history-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.history-item {
-    border-bottom: 1px solid var(--border-subtle);
-}
-
-.history-item:last-child {
-    border-bottom: none;
-}
-
-.history-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 90px 100px 140px 24px;
-    align-items: center;
-    padding: var(--space-5) var(--space-6);
-    gap: var(--space-4);
-    color: inherit;
-    transition: all var(--transition);
-}
-
-.history-row:hover,
-.history-row:focus-visible {
-    color: inherit;
-    background: var(--bg-elevated);
-}
-
-.history-row:hover .history-chevron {
-    stroke: var(--accent-cyan);
-    transform: translateX(3px);
-}
-
-/* --- Columns --- */
-.history-repo {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.history-repo-top {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2) var(--space-3);
-    flex-wrap: wrap;
-    min-width: 0;
-}
-
-.history-repo-name {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.profile-badge-sm {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 99px;
-    font-family: var(--font-heading);
-    font-size: 0.675rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
-.history-repo-url {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--text-muted);
-}
-
-.history-score {
-    display: flex;
-    align-items: center;
-}
-
-.history-duration,
-.history-date {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.history-action {
-    display: flex;
-    justify-content: flex-end;
-}
-
-.history-chevron {
-    width: 18px;
-    height: 18px;
-    stroke: var(--text-muted);
-    transition: transform var(--transition), stroke var(--transition);
-}
-
-/* --- Pagination --- */
 .pagination {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-5);
-    margin-top: var(--space-8);
-    padding-bottom: var(--space-4);
+    gap: var(--space-4);
+    margin-top: var(--space-6);
 }
+.pagination .icon { width: 15px; height: 15px; }
+.pagination-info { color: var(--text-2); font-size: var(--fs-sm); }
 
-.pagination-info {
-    min-width: 160px;
-    text-align: center;
-}
-
-/* --- Responsive --- */
-@media (max-width: 768px) {
-    .history-table-header,
-    .history-row {
-        grid-template-columns: minmax(0, 1fr) auto 18px;
-        gap: var(--space-3);
-        padding-left: var(--space-4);
-        padding-right: var(--space-4);
-    }
-
-    .th-hide,
-    .history-duration,
-    .history-date {
-        display: none;
-    }
-}
-
-/* --- Light Mode Overrides for History --- */
-html[data-theme="light"] .history-table-header {
-    background: #f8fafc !important;
-    border-bottom-color: rgba(15, 23, 42, 0.1) !important;
-}
-
-html[data-theme="light"] .history-item {
-    border-bottom-color: rgba(15, 23, 42, 0.06) !important;
-}
-
-html[data-theme="light"] .history-row:hover {
-    background: #f1f5f9 !important;
-}
-
-html[data-theme="light"] .history-repo-name {
-    color: #0f172a;
-}
-
-html[data-theme="light"] .search-input {
-    background: #f1f5f9 !important;
-    border: 1px solid rgba(15, 23, 42, 0.15) !important;
-    color: #0f172a !important;
+@media (max-width: 640px) {
+    .history-search-wrap { max-width: none; flex-basis: 100%; }
+    .history-selects { width: 100%; }
+    .history-selects .select { flex: 1; min-width: 0; }
+    .history-search-wrap .input-kbd { display: none; }
+    .hide-sm { display: none; }
+    .history-table th:first-child, .history-table td:first-child { padding-left: var(--space-4); }
+    .history-table th, .history-table td { padding-left: 8px; padding-right: 8px; }
+    .col-score { width: 84px; }
+    .score-cell { grid-template-columns: 1fr; gap: 4px; }
+    .score-num { text-align: left; }
+    .col-chevron { display: none; }
+    .history-when-sm { display: inline; }
 }
