@@ -7,7 +7,7 @@ A FastAPI web app, REST API and CLI. It reads a repository's metadata through th
 [![CI](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 
-**Live demo:** not deployed yet, so [run it locally](#run-locally) in a minute · REST API docs at `/docs` · [How it works](#how-it-works) · [Process flows](docs/process-flows.md)
+**Live demo:** [archlens-xhxr.onrender.com](https://archlens-xhxr.onrender.com) (free hosting: the first visit can take about a minute to wake it up) · REST API docs at `/docs` · [How it works](#how-it-works) · [Process flows](docs/process-flows.md)
 
 ![ArchLens report for pallets/werkzeug: a score gauge at 85 out of 100, grade A, an executive summary with 13 points within reach, and repository facts such as stars, last push and CI workflows](docs/screenshots/report.png)
 
@@ -143,7 +143,7 @@ Unit tests cover the scorer, the scoring page generator (it runs the real scorer
 1. Create a GitHub token for the API quota: GitHub > Settings > Developer settings > Fine-grained tokens, with **Public repositories (read-only)** access and no extra permissions. ArchLens only reads public data, so the token needs nothing else.
 2. In Render, choose **New > Blueprint** and select this repository. Render reads `render.yaml`.
 3. When prompted, paste the token as the value of `GITHUB_TOKEN`. It is stored in Render, never in the repository.
-4. After the first deploy, link the service URL as the **Live demo** at the top of this README.
+4. After the first deploy, put the service URL in the **Live demo** line at the top of this README.
 
 | Variable | Set by | Notes |
 | :--- | :--- | :--- |
