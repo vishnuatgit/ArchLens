@@ -4,76 +4,73 @@
 {% block meta_description %}Browse all previous repository analyses run through ArchLens, sorted by most recent.{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/static/css/history.css?v=2" />
+<link rel="stylesheet" href="/static/css/history.css?v=3" />
 {% endblock %}
 
 {% block content %}
 
 <div class="page-header" style="text-align: left;">
     <div class="history-title-wrap">
-        <svg class="history-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="history-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <h1>Analysis History</h1>
     </div>
-    <p class="text-secondary">Comprehensive log of all completed repository scans, ordered by most recent.</p>
+    <p class="text-secondary">Every completed repository scan, most recent first.</p>
 </div>
 
 {% if analyses %}
 <div class="history-filter-bar mb-4">
     <div class="search-input-wrap">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <input id="history-search" class="form-input search-input" type="text" placeholder="Filter by repository name..." onkeyup="filterHistory()" />
+        <input id="history-search" class="form-input search-input" type="text" placeholder="Filter by repository name..." aria-label="Filter by repository name" oninput="filterHistory()" />
     </div>
 </div>
 
 <div class="card history-card">
-    <div class="history-table-header">
-        <span class="th">Repository & Profile</span>
+    <div class="history-table-header" aria-hidden="true">
+        <span class="th">Repository &amp; Profile</span>
         <span class="th">Score</span>
         <span class="th th-hide">Duration</span>
-        <span class="th th-hide">Scan Timestamp</span>
-        <span class="th">Action</span>
+        <span class="th th-hide">Analyzed</span>
+        <span class="th"></span>
     </div>
 
     <ul class="history-list" id="history-list">
         {% for item in analyses %}
-        <li class="history-row">
-            <div class="history-repo">
-                <div class="history-repo-top">
-                    <span class="history-repo-name mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
-                    <span class="profile-badge-sm profile-{{ item.repo_type }}">{{ item.repo_type }}</span>
+        <li class="history-item">
+            <a href="/analysis/{{ item.id }}" class="history-row">
+                <div class="history-repo">
+                    <div class="history-repo-top">
+                        <span class="history-repo-name mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
+                        <span class="profile-badge-sm profile-{{ item.repo_type }}">{{ item.repo_type }}</span>
+                        {% if item.is_example %}<span class="example-tag">Example</span>{% endif %}
+                    </div>
+                    <span class="history-repo-url text-muted text-xs">{{ item.repository.url }}</span>
                 </div>
-                <span class="history-repo-url text-muted text-xs">{{ item.repository.url }}</span>
-            </div>
 
-            <div class="history-score">
-                {% if item.score >= 70 %}
-                <span class="score-badge score-high">{{ item.score }}</span>
-                {% elif item.score >= 40 %}
-                <span class="score-badge score-mid">{{ item.score }}</span>
-                {% else %}
-                <span class="score-badge score-low">{{ item.score }}</span>
-                {% endif %}
-            </div>
+                <div class="history-score">
+                    <span class="score-badge score-{{ score_tier(item.score).key }}">{{ item.score }}</span>
+                </div>
 
-            <div class="history-duration th-hide">
-                <span class="text-sm text-secondary mono">{{ "%.2f"|format(item.duration) }}s</span>
-            </div>
+                <div class="history-duration th-hide">
+                    <span class="text-sm text-secondary mono">{{ "%.2f"|format(item.duration) }}s</span>
+                </div>
 
-            <div class="history-date th-hide">
-                <span class="text-sm text-secondary">{{ item.created_at.strftime("%b %d, %Y") }}</span>
-                <span class="text-xs text-muted">{{ item.created_at.strftime("%H:%M UTC") }}</span>
-            </div>
+                <div class="history-date th-hide">
+                    <span class="text-sm text-secondary">{{ item.created_at.strftime("%b %d, %Y") }}</span>
+                    <span class="text-xs text-muted">{{ item.created_at.strftime("%H:%M UTC") }}</span>
+                </div>
 
-            <div class="history-action">
-                <a href="/analysis/{{ item.id }}" class="btn btn-secondary btn-sm">
-                    <span>View Report</span>
-                </a>
-            </div>
+                <div class="history-action" aria-hidden="true">
+                    <svg class="history-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                </div>
+            </a>
         </li>
         {% endfor %}
     </ul>
@@ -83,7 +80,7 @@
 <div class="pagination">
     {% if offset > 0 %}
     <a href="/history?offset={{ [offset - limit, 0]|max }}&limit={{ limit }}" class="btn btn-secondary btn-sm">
-        <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="15 18 9 12 15 6" />
         </svg>
         <span>Previous</span>
@@ -97,7 +94,7 @@
     {% if offset + limit < total %}
     <a href="/history?offset={{ offset + limit }}&limit={{ limit }}" class="btn btn-secondary btn-sm">
         <span>Next</span>
-        <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="9 18 15 12 9 6" />
         </svg>
     </a>
@@ -108,7 +105,7 @@
 {% else %}
 <div class="empty-state">
     <div class="empty-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
             <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
     </div>
@@ -124,19 +121,19 @@
     function filterHistory() {
         const input = document.getElementById('history-search');
         const filter = input.value.toLowerCase();
-        const rows = document.querySelectorAll('.history-row');
+        const items = document.querySelectorAll('.history-item');
         let visibleCount = 0;
 
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
             if (text.includes(filter)) {
-                row.style.display = 'grid';
+                item.style.display = '';
                 visibleCount++;
             } else {
-                row.style.display = 'none';
+                item.style.display = 'none';
             }
         });
-        
+
         let emptyMsg = document.getElementById('filter-empty-msg');
         if (visibleCount === 0) {
             if (!emptyMsg) {
@@ -145,7 +142,7 @@
                 emptyMsg.className = 'empty-state';
                 emptyMsg.style.padding = 'var(--space-8) 0';
                 emptyMsg.innerHTML = '<p class="text-secondary" style="margin: 0; font-size: 0.95rem;">No matching repositories found.</p>';
-                document.getElementById('history-list').appendChild(emptyMsg);
+                document.getElementById('history-list').after(emptyMsg);
             }
             emptyMsg.style.display = 'block';
         } else if (emptyMsg) {

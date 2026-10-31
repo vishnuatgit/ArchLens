@@ -1,19 +1,21 @@
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
-from app.exceptions import (
-    AnalysisNotFoundError,
-    InvalidRepositoryURLError,
-    RateLimitExceededError,
-    RepositoryNotFoundError,
-)
+from app.dependencies import get_analysis_service
+from app.exceptions import ArchLensError
 from app.middleware.logging_middleware import LoggingMiddleware
+from app.repositories.db import SessionLocal
 from app.routers import api, web
+from app.services.seed_service import seed_examples_on_startup
+from app.templating import templates
 
 # Setup logging configuration based on settings
 logging.basicConfig(
@@ -24,6 +26,19 @@ logger = logging.getLogger("ArchLens")
 
 # Resolve template and static directories relative to this file
 BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "app" / "static"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Opens the shared GitHub HTTP client and loads example reports into an empty database."""
+    github = get_analysis_service().github
+    github.start()
+    if settings.SEED_EXAMPLES:
+        seed_examples_on_startup(SessionLocal)
+    yield
+    await github.aclose()
+
 
 # Initialize the main FastAPI application
 app = FastAPI(
@@ -32,58 +47,65 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Register custom logging and timing middleware
 app.add_middleware(LoggingMiddleware)
 
 # Mount static files directory
-app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Register Web and REST API routers
 app.include_router(web.router)
 app.include_router(api.router)
 
 
-# Centralised Exception Handlers for JSON API requests
-@app.exception_handler(InvalidRepositoryURLError)
-async def invalid_url_handler(request: Request, exc: InvalidRepositoryURLError):
-    if request.url.path.startswith("/api/"):
+def is_api_request(request: Request) -> bool:
+    return request.url.path.startswith("/api/")
+
+
+# Centralised exception handler: every ArchLensError carries its own status and error code
+@app.exception_handler(ArchLensError)
+async def archlens_error_handler(request: Request, exc: ArchLensError):
+    retry_after = exc.retry_after_seconds
+    headers = {"Retry-After": str(retry_after)} if retry_after else None
+    if is_api_request(request):
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": exc.message, "error_code": "INVALID_URL", "status_code": 400},
+            status_code=exc.status_code,
+            content={
+                "error": exc.message,
+                "error_code": exc.error_code,
+                "status_code": exc.status_code,
+            },
+            headers=headers,
         )
-    raise exc
+    return templates.TemplateResponse(
+        request=request,
+        name="404.html",
+        context={
+            "status": exc.status_code,
+            "heading": "Something went wrong",
+            "message": exc.message,
+        },
+        status_code=exc.status_code,
+        headers=headers,
+    )
 
 
-@app.exception_handler(RepositoryNotFoundError)
-async def repo_not_found_handler(request: Request, exc: RepositoryNotFoundError):
-    if request.url.path.startswith("/api/"):
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"error": exc.message, "error_code": "REPO_NOT_FOUND", "status_code": 404},
+@app.exception_handler(StarletteHTTPException)
+async def not_found_page_handler(request: Request, exc: StarletteHTTPException):
+    """Serves an HTML 404 page to browsers; API clients keep FastAPI's JSON errors."""
+    if exc.status_code == 404 and not is_api_request(request):
+        return templates.TemplateResponse(
+            request=request, name="404.html", context={}, status_code=404
         )
-    raise exc
+    return await http_exception_handler(request, exc)
 
 
-@app.exception_handler(AnalysisNotFoundError)
-async def analysis_not_found_handler(request: Request, exc: AnalysisNotFoundError):
-    if request.url.path.startswith("/api/"):
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"error": exc.message, "error_code": "ANALYSIS_NOT_FOUND", "status_code": 404},
-        )
-    raise exc
-
-
-@app.exception_handler(RateLimitExceededError)
-async def rate_limit_handler(request: Request, exc: RateLimitExceededError):
-    if request.url.path.startswith("/api/"):
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": exc.message, "error_code": "RATE_LIMIT_EXCEEDED", "status_code": 503},
-        )
-    raise exc
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
 
 
 @app.get("/health", tags=["System"])

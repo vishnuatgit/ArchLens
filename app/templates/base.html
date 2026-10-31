@@ -3,12 +3,27 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="{% block meta_description %}ArchLens - Repository Intelligence Platform for Engineering Analysis{% endblock %}" />
     <title>{% block title %}ArchLens &mdash; Repository Intelligence{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}ArchLens scores the engineering health of public GitHub repositories from 0 to 100, with strengths, concerns and next steps.{% endblock %}" />
+    <meta name="author" content="{{ site.author }}" />
+    <meta name="theme-color" content="#070a12" />
+
+    <!-- Open Graph / link previews -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ArchLens" />
+    <meta property="og:title" content="{{ self.title() }}" />
+    <meta property="og:description" content="{{ self.meta_description() }}" />
+    <meta name="twitter:card" content="summary" />
+
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
 
     <script>
         (function() {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
+            // Storage can be unavailable (privacy modes, blocked cookies); fall back to dark
+            let savedTheme = 'dark';
+            try {
+                savedTheme = localStorage.getItem('theme') || 'dark';
+            } catch (e) {}
             document.documentElement.setAttribute('data-theme', savedTheme);
         })();
     </script>
@@ -19,7 +34,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="/static/css/styles.css?v=7" />
+    <link rel="stylesheet" href="/static/css/styles.css?v=8" />
 
     {% block head_extra %}{% endblock %}
 </head>
@@ -30,11 +45,11 @@
     <div class="bg-glow bg-glow-2"></div>
 
     <!-- Navigation Bar -->
-    <nav class="navbar">
+    <nav class="navbar" aria-label="Main">
         <div class="nav-inner container">
-            <a href="/" class="nav-brand">
+            <a href="/" class="nav-brand" aria-label="ArchLens home">
                 <div class="brand-logo-wrap">
-                    <svg class="brand-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="brand-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <circle cx="12" cy="12" r="9" stroke="url(#brand-grad)" stroke-width="2.2" />
                         <circle cx="12" cy="12" r="4" fill="url(#brand-grad)" />
                         <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="url(#brand-grad)" stroke-linecap="round" />
@@ -51,25 +66,25 @@
             </a>
             <ul class="nav-links">
                 <li>
-                    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
-                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <a href="/" class="nav-link {% if request.url.path in ('/', '/analyze') %}active{% endif %}" title="Analyze a repository">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <circle cx="11" cy="11" r="8" />
                             <line x1="21" y1="21" x2="16.65" y2="16.65" />
                         </svg>
-                        <span>Analyze</span>
+                        <span class="nav-label">Analyze</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/history" class="nav-link {% if request.url.path == '/history' %}active{% endif %}">
-                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <a href="/history" class="nav-link {% if request.url.path == '/history' %}active{% endif %}" title="Analysis history">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>History</span>
+                        <span class="nav-label">History</span>
                     </a>
                 </li>
                 <li>
-                    <button id="theme-toggle-btn" type="button" class="nav-link theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle Theme" style="background: none; border: none; cursor: pointer; padding: var(--space-2) var(--space-3);">
-                        <svg id="theme-sun-icon" class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                    <button id="theme-toggle-btn" type="button" class="nav-link theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle colour theme" title="Toggle colour theme">
+                        <svg id="theme-sun-icon" class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;" aria-hidden="true">
                             <circle cx="12" cy="12" r="5" />
                             <line x1="12" y1="1" x2="12" y2="3" />
                             <line x1="12" y1="21" x2="12" y2="23" />
@@ -80,10 +95,10 @@
                             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
                             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
                         </svg>
-                        <svg id="theme-moon-icon" class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg id="theme-moon-icon" class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                         </svg>
-                        <span id="theme-toggle-text">Theme</span>
+                        <span id="theme-toggle-text" class="nav-label">Theme</span>
                     </button>
                 </li>
             </ul>
@@ -102,9 +117,16 @@
         <div class="container footer-inner">
             <div class="footer-brand">
                 <span class="footer-dot"></span>
-                <span class="footer-text">ArchLens &mdash; Repository Intelligence Platform</span>
+                <span class="footer-text">
+                    ArchLens &mdash; built by
+                    <a href="{{ site.portfolio_url }}" target="_blank" rel="noopener">{{ site.author }}</a>
+                </span>
             </div>
-            <span class="footer-meta">FastAPI &bull; Python 3.11 &bull; Async GitHub API Engine</span>
+            <nav class="footer-links" aria-label="Footer">
+                <a href="{{ site.portfolio_url }}" target="_blank" rel="noopener">Portfolio</a>
+                <a href="{{ site.repo_url }}" target="_blank" rel="noopener">Source on GitHub</a>
+                <a href="/docs">API docs</a>
+            </nav>
         </div>
     </footer>
 
@@ -128,7 +150,9 @@
             const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
             const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', nextTheme);
-            localStorage.setItem('theme', nextTheme);
+            try {
+                localStorage.setItem('theme', nextTheme);
+            } catch (e) {}
             syncThemeUI();
         }
         document.addEventListener('DOMContentLoaded', syncThemeUI);

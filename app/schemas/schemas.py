@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.services.metrics_service import RepoType
+
 
 class RepositoryResponse(BaseModel):
     """Schema for repository details."""
@@ -52,6 +54,7 @@ class AnalysisDetailResponse(BaseModel):
     executive_summary: str = ""
     duration: float
     repo_type: str
+    is_example: bool = False
     created_at: datetime
     repository: RepositoryResponse
     metrics: MetricApiResponse | None = None
@@ -67,6 +70,7 @@ class AnalysisSummaryResponse(BaseModel):
     health_grade: str = "C"
     duration: float
     repo_type: str
+    is_example: bool = False
     created_at: datetime
     repo_owner: str
     repo_name: str
@@ -89,11 +93,11 @@ class AnalyzeApiRequest(BaseModel):
 
     url: str = Field(
         ...,
-        description="Public GitHub repository URL (e.g. https://github.com/fastapi/fastapi)",
+        description="Public GitHub repository URL or owner/repo (e.g. https://github.com/fastapi/fastapi)",
         examples=["https://github.com/fastapi/fastapi"],
     )
-    repo_type: str = Field(
-        default="library",
+    repo_type: RepoType = Field(
+        default=RepoType.LIBRARY,
         description="Repository evaluation profile: 'library', 'personal', or 'enterprise'",
         examples=["library"],
     )

@@ -5,6 +5,7 @@ from typer.testing import CliRunner
 
 from app.cli import app
 from app.exceptions import (
+    EmptyRepositoryError,
     InvalidRepositoryURLError,
     RateLimitExceededError,
     RepositoryNotFoundError,
@@ -67,3 +68,10 @@ def test_analyze_general_error(mock_async_analyze):
     result = runner.invoke(app, ["https://github.com/a/b"])
     assert result.exit_code == 1
     assert "An unexpected error occurred" in result.stdout
+
+
+def test_analyze_application_error_prints_its_message(mock_async_analyze):
+    mock_async_analyze.side_effect = EmptyRepositoryError("a", "b")
+    result = runner.invoke(app, ["a/b"])
+    assert result.exit_code == 1
+    assert "is empty" in result.stdout

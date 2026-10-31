@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import datetime
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.db_models import Analysis, Metric, Repository
@@ -17,8 +18,9 @@ class RepositoryService:
     def get_or_create_repository(self, db: Session, owner: str, name: str, url: str) -> Repository:
         """
         Returns an existing repository record or creates a new one if not found.
+        URLs are matched case-insensitively because GitHub treats owner/repo that way.
         """
-        repo = db.query(Repository).filter(Repository.url == url).first()
+        repo = db.query(Repository).filter(func.lower(Repository.url) == url.lower()).first()
         if not repo:
             repo = Repository(owner=owner, name=name, url=url)
             db.add(repo)
@@ -100,6 +102,36 @@ class RepositoryService:
         Retrieves a single analysis record by primary key, including related metrics.
         """
         return db.query(Analysis).filter(Analysis.id == analysis_id).first()
+
+    def find_recent_analysis(
+        self, db: Session, url: str, repo_type: str, since: datetime
+    ) -> Analysis | None:
+        """
+        Returns the newest live (non-example) analysis of a repository and profile
+        created at or after `since`, so a repeat request can reuse it.
+        """
+        return (
+            db.query(Analysis)
+            .join(Repository)
+            .filter(
+                func.lower(Repository.url) == url.lower(),
+                Analysis.repo_type == repo_type,
+                Analysis.is_example.is_(False),
+                Analysis.created_at >= since,
+            )
+            .order_by(Analysis.created_at.desc())
+            .first()
+        )
+
+    def get_featured_analysis(self, db: Session) -> Analysis | None:
+        """
+        Returns the analysis previewed on the home page: the first example report,
+        or the most recent analysis when no examples are loaded.
+        """
+        example = (
+            db.query(Analysis).filter(Analysis.is_example.is_(True)).order_by(Analysis.id).first()
+        )
+        return example or db.query(Analysis).order_by(Analysis.created_at.desc()).first()
 
     def get_history(self, db: Session, limit: int = 20, offset: int = 0) -> list[Analysis]:
         """

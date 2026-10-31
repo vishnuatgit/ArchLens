@@ -20,6 +20,7 @@
 
 .hero-content-left {
     max-width: 540px;
+    min-width: 0;
 }
 
 .hero-content-right {
@@ -83,7 +84,8 @@ html[data-theme="light"] .glass-card {
 }
 
 .main-glass-card {
-    width: 440px;
+    width: 100%;
+    max-width: 440px;
     padding: var(--space-5);
     z-index: 2;
 }
@@ -123,54 +125,162 @@ html[data-theme="light"] .glass-card-header {
     color: var(--text-secondary);
 }
 
-.glass-score-ring {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    border: 5px solid var(--accent-cyan);
+/* --- Report Preview Card (links to a stored report) --- */
+.preview-card {
+    display: block;
+    color: inherit;
+    text-align: left;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.preview-card:hover {
+    color: inherit;
+    border-color: var(--border-accent);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), 0 0 24px rgba(99, 102, 241, 0.2);
+}
+
+.preview-repo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: var(--space-4);
+}
+
+.preview-repo-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+}
+
+.preview-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.preview-score-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin: 0 auto var(--space-5);
-    box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
 }
 
-.glass-score-num {
-    font-size: 2rem;
+.preview-score {
+    display: flex;
+    align-items: baseline;
+}
+
+.preview-score-num {
+    font-family: var(--font-heading);
+    font-size: 2.75rem;
     font-weight: 800;
-    color: var(--text-primary);
+    line-height: 1;
 }
 
-.glass-bars {
+.preview-score-total {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-left: 2px;
+}
+
+.preview-score-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.preview-grade {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.preview-tier {
+    min-width: 0;
+    padding: 3px 10px;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+}
+
+.preview-bars {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    margin-bottom: var(--space-4);
 }
 
-.glass-bar {
-    height: 8px;
-    border-radius: 4px;
-    background: var(--accent-indigo);
-    opacity: 0.8;
-}
-
-.mini-glass-card {
-    position: absolute;
-    bottom: -20px;
-    right: -20px;
-    padding: var(--space-3) var(--space-5);
-    display: flex;
+.preview-bar-row {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr) 40px;
     align-items: center;
-    gap: var(--space-2);
-    font-size: 1rem;
+    gap: var(--space-3);
+    font-size: 0.8rem;
+}
+
+.preview-bar-label {
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.preview-bar-track {
+    height: 6px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+}
+
+.preview-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+}
+
+.preview-bar-val {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.preview-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--accent-cyan);
-    z-index: 3;
 }
 
-.mini-glass-card svg {
-    width: 20px;
-    height: 20px;
+.preview-cta svg {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--transition);
+}
+
+.preview-card:hover .preview-cta svg {
+    transform: translateX(4px);
+}
+
+/* Shown instead of the preview when no reports are stored yet */
+.how-card {
+    text-align: left;
+}
+
+.how-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-left: var(--space-5);
+    list-style: decimal;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.how-steps strong {
+    color: var(--text-primary);
 }
 
 /* Animations */
@@ -334,17 +444,81 @@ html[data-theme="light"] .glass-card-header {
     background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.5), transparent);
 }
 
-.form-grid {
-    display: flex;
+.form-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-4);
-    align-items: flex-end;
+    align-items: end;
 }
 
-.flex-2 { flex: 2; }
-.flex-1 { flex: 1; }
+.form-group-profile {
+    min-width: 0;
+}
 
 .form-btn-wrap {
     flex-shrink: 0;
+}
+
+/* --- Example Repository Chips --- */
+.example-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-3) 0 var(--space-5);
+}
+
+.example-chips-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.example-chip {
+    padding: 4px 12px;
+    border-radius: 99px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.example-chip:hover,
+.example-chip:focus-visible {
+    color: var(--text-primary);
+    border-color: var(--border-accent);
+    background: var(--accent-dim);
+}
+
+.example-chip:focus-visible {
+    outline: 2px solid var(--accent-cyan);
+    outline-offset: 2px;
+}
+
+/* --- Step-by-step progress while an analysis runs --- */
+.form-progress {
+    display: none;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.form-progress.is-active {
+    display: flex;
+}
+
+.form-progress.is-active::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
+    animation: pulse 1.2s infinite;
 }
 
 .btn-arrow {
@@ -360,7 +534,7 @@ html[data-theme="light"] .glass-card-header {
 /* --- Dimension Tags --- */
 .dimension-tags {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     flex-wrap: wrap;
     gap: var(--space-3);
     margin-top: var(--space-6);
@@ -526,25 +700,13 @@ html[data-theme="light"] .glass-card-header {
         margin: 0 auto;
     }
 
+    .dimension-tags {
+        justify-content: center;
+    }
+
     .hero-content-right {
-        margin-top: var(--space-8);
-        min-height: 300px;
-    }
-
-    .main-glass-card {
-        width: 100%;
-        max-width: 320px;
-    }
-
-    .mini-glass-card {
-        right: 0;
-        bottom: -10px;
-        font-size: 0.85rem;
-    }
-    
-    .mini-glass-card svg {
-        width: 16px;
-        height: 16px;
+        margin-top: var(--space-4);
+        min-height: 0;
     }
 
     .security-container {
@@ -557,14 +719,26 @@ html[data-theme="light"] .glass-card-header {
 @media (max-width: 768px) {
     .hero-title { font-size: 2.2rem; }
 
-    .form-grid {
-        flex-direction: column;
-        align-items: stretch;
+    .form-row {
+        grid-template-columns: 1fr;
     }
 
     .form-btn-wrap .btn {
         width: 100%;
     }
+
+    .security-container {
+        padding: var(--space-6) var(--space-5);
+    }
+}
+
+@media (max-width: 480px) {
+    .hero { padding-top: var(--space-6); }
+    .hero-title { font-size: 2rem; }
+    .analyze-card { padding: var(--space-5); }
+    .preview-bar-row { grid-template-columns: 100px minmax(0, 1fr) 36px; gap: var(--space-2); }
+    .scan-link { padding: var(--space-3) var(--space-4); }
+    .scan-left { gap: var(--space-3); }
 }
 
 /* --- Light Mode Overrides for Home --- */
@@ -580,6 +754,16 @@ html[data-theme="light"] .scan-link {
 
 html[data-theme="light"] .scan-item {
     border-bottom-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+html[data-theme="light"] .preview-bar-track {
+    background: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .example-chip {
+    background: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.15);
+    color: #334155;
 }
 
 html[data-theme="light"] .dim-tag {

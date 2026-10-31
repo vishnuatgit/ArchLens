@@ -11,12 +11,14 @@ from rich.panel import Panel
 from rich.table import Table
 
 from app.exceptions import (
+    ArchLensError,
     InvalidRepositoryURLError,
     RateLimitExceededError,
     RepositoryNotFoundError,
 )
 from app.repositories.db import SessionLocal
 from app.services.analysis_service import AnalysisService
+from app.services.metrics_service import DIMENSION_MAX_POINTS, score_tier
 
 app = typer.Typer(help="ArchLens CLI - engineering health scoring for GitHub repositories")
 console = Console()
@@ -32,6 +34,7 @@ async def async_analyze(url: str, profile: str) -> dict:
         return await service.run(db=db, url=url, repo_type=profile)
     finally:
         db.close()
+        await service.github.aclose()
 
 
 @app.command()
@@ -73,6 +76,9 @@ def analyze(
                 f"[bold red]Error:[/bold red] GitHub API rate limit exceeded. Reset time: {e.reset_epoch}"
             )
             raise typer.Exit(code=1)
+        except ArchLensError as e:
+            console.print(f"[bold red]Error:[/bold red] {e.message}")
+            raise typer.Exit(code=1)
         except Exception as e:
             console.print(f"[bold red]Error:[/bold red] An unexpected error occurred: {str(e)}")
             raise typer.Exit(code=1)
@@ -82,8 +88,9 @@ def analyze(
 
     score = result["score"]
 
-    # Colorize score
-    score_color = "green" if score >= 70 else "yellow" if score >= 40 else "red"
+    # Colorize score using the same tiers as the web dashboard
+    tier_colors = {"high": "green", "mid": "yellow", "low": "red"}
+    score_color = tier_colors[score_tier(score).key]
 
     # 1. Summary Panel
     summary_text = (
@@ -100,13 +107,10 @@ def analyze(
     table.add_column("Dimension")
     table.add_column("Score", justify="right")
 
-    # Maximum points per dimension, matching MetricsService
-    max_points = {"security": 12, "code_quality": 13}
     for k, v in result["breakdown"].items():
         if isinstance(v, (int, float)):
-            max_v = max_points.get(k, 15)
-            ratio = v / max_v
-            dim_color = "green" if ratio >= 0.7 else "yellow" if ratio >= 0.4 else "red"
+            max_v = DIMENSION_MAX_POINTS.get(k, 15)
+            dim_color = tier_colors[score_tier(v / max_v * 100).key]
             table.add_row(
                 k.capitalize().replace("_", " "), f"[{dim_color}]{v}/{max_v}[/{dim_color}]"
             )

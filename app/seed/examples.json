@@ -1,0 +1,203 @@
+{
+  "description": "Real ArchLens analyses captured by scripts/build_examples.py. They are loaded into an empty database on startup and labelled as examples in the UI.",
+  "examples": [
+    {
+      "owner": "psf",
+      "name": "requests",
+      "url": "https://github.com/psf/requests",
+      "repo_type": "library",
+      "score": 77,
+      "duration": 1.162,
+      "analyzed_at": "2026-10-31T12:46:13",
+      "metrics": {
+        "stars": 54641,
+        "forks": 12089,
+        "open_issues": 245,
+        "language_count": 2,
+        "contributor_count": 100,
+        "repo_size": 13635,
+        "security_score": 3,
+        "code_quality_score": 9,
+        "health_grade": "B+",
+        "executive_summary": "This open-source library scored 77/100 (Grade: B+), placing it in the Strong Codebase tier. Key strengths: found repository README; found LICENSE permissions file. Primary area for improvement: high open issue count (245).",
+        "last_pushed": "2026-10-26T17:14:44",
+        "languages": {
+          "Python": 99.4,
+          "Makefile": 0.6
+        },
+        "score_breakdown": {
+          "documentation": 15,
+          "activity": 9,
+          "organization": 15,
+          "community": 15,
+          "maintainability": 11,
+          "security": 3,
+          "code_quality": 9
+        },
+        "strengths": [
+          "Found repository README.",
+          "Found LICENSE permissions file.",
+          "Found documentation/contributing guidelines.",
+          "Low commit activity: 1 commit(s) in the last 30 days.",
+          "Repository updated recently (within the last 30 days).",
+          "Found dedicated test suite directory.",
+          "Source code organized into a dedicated subdirectory.",
+          "Found workspace configuration files.",
+          "Strong community interest with 54,641 stars.",
+          "High fork count (12,089).",
+          "Active contributor base with 100+ contributors.",
+          "Found 8 GitHub Actions workflow(s).",
+          "Repository size is lean and well-managed.",
+          "Found .gitignore secret protection file.",
+          "Found linter/formatter configuration (Ruff/ESLint/Prettier/pyproject.toml).",
+          "Found .pre-commit-config.yaml git hooks automation."
+        ],
+        "weaknesses": [
+          "High open issue count (245).",
+          "Missing dependency lockfile (e.g. requirements.txt, package-lock.json).",
+          "Missing SECURITY.md vulnerability reporting policy.",
+          "Missing explicit static type checker configuration."
+        ],
+        "suggestions": [
+          "Commit a dependency lockfile for reproducible deployments.",
+          "Add a SECURITY.md file detailing security issue reporting.",
+          "Add static type checking configuration (e.g. mypy.ini or tsconfig.json)."
+        ]
+      }
+    },
+    {
+      "owner": "pallets",
+      "name": "flask",
+      "url": "https://github.com/pallets/flask",
+      "repo_type": "library",
+      "score": 81,
+      "duration": 0.439,
+      "analyzed_at": "2026-10-31T12:46:14",
+      "metrics": {
+        "stars": 74995,
+        "forks": 17233,
+        "open_issues": 4,
+        "language_count": 4,
+        "contributor_count": 100,
+        "repo_size": 12227,
+        "security_score": 3,
+        "code_quality_score": 9,
+        "health_grade": "B+",
+        "executive_summary": "This open-source library scored 81/100 (Grade: B+), placing it in the Strong Codebase tier. Key strengths: found repository README; found LICENSE permissions file. Primary area for improvement: missing dependency lockfile (e.g. requirements.txt, package-lock.json).",
+        "last_pushed": "2026-10-30T15:05:22",
+        "languages": {
+          "Python": 99.9,
+          "HTML": 0.1,
+          "Shell": 0.0,
+          "CSS": 0.0
+        },
+        "score_breakdown": {
+          "documentation": 15,
+          "activity": 11,
+          "organization": 15,
+          "community": 15,
+          "maintainability": 13,
+          "security": 3,
+          "code_quality": 9
+        },
+        "strengths": [
+          "Found repository README.",
+          "Found LICENSE permissions file.",
+          "Found documentation/contributing guidelines.",
+          "Moderate commit activity: 9 commits in the last 30 days.",
+          "Repository updated recently (within the last 30 days).",
+          "Found dedicated test suite directory.",
+          "Source code organized into a dedicated subdirectory.",
+          "Found workspace configuration files.",
+          "Strong community interest with 74,995 stars.",
+          "High fork count (17,233).",
+          "Active contributor base with 100+ contributors.",
+          "Found 5 GitHub Actions workflow(s).",
+          "Manageable open issue count (4 issues).",
+          "Repository size is lean and well-managed.",
+          "Found .gitignore secret protection file.",
+          "Found linter/formatter configuration (Ruff/ESLint/Prettier/pyproject.toml).",
+          "Found .pre-commit-config.yaml git hooks automation."
+        ],
+        "weaknesses": [
+          "Missing dependency lockfile (e.g. requirements.txt, package-lock.json).",
+          "Missing SECURITY.md vulnerability reporting policy.",
+          "Missing explicit static type checker configuration."
+        ],
+        "suggestions": [
+          "Commit a dependency lockfile for reproducible deployments.",
+          "Add a SECURITY.md file detailing security issue reporting.",
+          "Add static type checking configuration (e.g. mypy.ini or tsconfig.json)."
+        ]
+      }
+    },
+    {
+      "owner": "vishnuatgit",
+      "name": "ArchLens",
+      "url": "https://github.com/vishnuatgit/ArchLens",
+      "repo_type": "library",
+      "score": 75,
+      "duration": 0.725,
+      "analyzed_at": "2026-10-31T12:46:14",
+      "metrics": {
+        "stars": 1,
+        "forks": 0,
+        "open_issues": 0,
+        "language_count": 5,
+        "contributor_count": 1,
+        "repo_size": 250,
+        "security_score": 12,
+        "code_quality_score": 9,
+        "health_grade": "B+",
+        "executive_summary": "This open-source library scored 75/100 (Grade: B+), placing it in the Strong Codebase tier. Key strengths: found repository README; found LICENSE permissions file. Primary area for improvement: low community visibility with 1 star(s).",
+        "last_pushed": "2026-10-23T06:17:58",
+        "languages": {
+          "Python": 55.3,
+          "CSS": 23.5,
+          "HTML": 20.4,
+          "Dockerfile": 0.6,
+          "Mako": 0.3
+        },
+        "score_breakdown": {
+          "documentation": 15,
+          "activity": 9,
+          "organization": 15,
+          "community": 0,
+          "maintainability": 15,
+          "security": 12,
+          "code_quality": 9
+        },
+        "strengths": [
+          "Found repository README.",
+          "Found LICENSE permissions file.",
+          "Found documentation/contributing guidelines.",
+          "Low commit activity: 1 commit(s) in the last 30 days.",
+          "Repository updated recently (within the last 30 days).",
+          "Found dedicated test suite directory.",
+          "Source code organized into a dedicated subdirectory.",
+          "Found workspace configuration files.",
+          "Found 1 GitHub Actions workflow(s).",
+          "Zero open issues.",
+          "Repository size is lean and well-managed.",
+          "Found .gitignore secret protection file.",
+          "Found dependency lockfile for deterministic builds.",
+          "Found environment variable template (.env.example).",
+          "Found explicit SECURITY.md policy.",
+          "Found linter/formatter configuration (Ruff/ESLint/Prettier/pyproject.toml).",
+          "Found .pre-commit-config.yaml git hooks automation."
+        ],
+        "weaknesses": [
+          "Low community visibility with 1 star(s).",
+          "Low fork count (0).",
+          "Only a single contributor.",
+          "Missing explicit static type checker configuration."
+        ],
+        "suggestions": [
+          "Promote your repository on developer communities.",
+          "Open issues for good first contributions.",
+          "Add static type checking configuration (e.g. mypy.ini or tsconfig.json)."
+        ]
+      }
+    }
+  ]
+}

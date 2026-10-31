@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import relationship
 
 from app.repositories.db import Base
@@ -41,6 +41,8 @@ class Analysis(Base):
     score = Column(Integer, nullable=False)
     duration = Column(Float, nullable=False)
     repo_type = Column(String, default="library", server_default="library", nullable=False)
+    # Example reports are loaded from app/seed/examples.json rather than run live
+    is_example = Column(Boolean, default=False, server_default=false(), nullable=False)
     created_at = Column(DateTime, default=utc_now_naive, nullable=False)
 
     # Establish relationships

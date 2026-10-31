@@ -1,25 +1,52 @@
+# Version control and CI
 .git
 .gitignore
 .dockerignore
+.github
+.pre-commit-config.yaml
+
+# Secrets and local configuration
+.env
+.env.*
+
+# Virtual environments
 .venv
 venv
 ENV
 env
+
+# Python and tool caches
 __pycache__
 *.py[cod]
 *$py.class
+*.egg-info
+build
+dist
 .pytest_cache
+.ruff_cache
+.mypy_cache
 .coverage
+.coverage.*
+coverage.xml
 htmlcov
+
+# Local databases and logs (the container creates its own)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.log
+
+# Editors and OS files
 .vscode
 .idea
-*.db
-*.sqlite
-*.log
+.DS_Store
+Thumbs.db
+
+# Development-only files
 tests/
-.github
+requirements-dev.txt
 docs
 *.md
 !README.md
 render.yaml
-.ruff_cache

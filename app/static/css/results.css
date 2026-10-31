@@ -57,20 +57,56 @@
     font-weight: 800;
     color: var(--text-primary);
     letter-spacing: -0.03em;
+    overflow-wrap: anywhere;
 }
-
-
 
 .results-sub {
     color: var(--text-secondary);
 }
 
-/* --- Top Grid --- */
-.results-top-grid {
+/* --- Overview Grid (summary, score gauge, breakdown) --- */
+.results-overview {
     display: grid;
     grid-template-columns: 280px 1fr;
+    grid-template-areas:
+        "summary summary"
+        "score breakdown";
     gap: var(--space-6);
     margin-bottom: var(--space-6);
+}
+
+.exec-summary-card { grid-area: summary; }
+.score-card        { grid-area: score; }
+.breakdown-card    { grid-area: breakdown; }
+
+/* --- Example Report Banner --- */
+.example-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.example-banner-icon {
+    width: 18px;
+    height: 18px;
+    stroke: var(--accent-cyan);
+    flex-shrink: 0;
+}
+
+.example-banner-text {
+    flex: 1;
+    min-width: 220px;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.example-banner-text strong {
+    color: var(--text-primary);
 }
 
 /* --- Score Card & Gauge --- */
@@ -94,6 +130,7 @@
     width: 100%;
     height: 100%;
     transform: rotate(-90deg);
+    overflow: visible; /* keep the arc's glow from being clipped into a square */
 }
 
 .gauge-track {
@@ -125,10 +162,6 @@
     line-height: 1;
 }
 
-.gauge-high { color: var(--green); text-shadow: 0 0 16px rgba(52, 211, 153, 0.4); }
-.gauge-mid  { color: var(--amber); text-shadow: 0 0 16px rgba(251, 191, 36, 0.4); }
-.gauge-low  { color: var(--red);   text-shadow: 0 0 16px rgba(244, 63, 94, 0.4); }
-
 .gauge-total {
     font-family: var(--font-mono);
     font-size: 0.85rem;
@@ -146,15 +179,19 @@
     text-transform: uppercase;
 }
 
-.tier-strong   { background: var(--green-dim); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.3); }
-.tier-moderate { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(251, 191, 36, 0.3); }
-.tier-weak     { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(244, 63, 94, 0.3); }
+.tier-high { background: var(--green-dim); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.3); }
+.tier-mid  { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(251, 191, 36, 0.3); }
+.tier-low  { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(244, 63, 94, 0.3); }
 
 /* --- Dimension Breakdown Card --- */
 .breakdown-card {
     display: flex;
     flex-direction: column;
     justify-content: center;
+}
+
+.breakdown-card > .card-title {
+    margin-bottom: var(--space-4);
 }
 
 .breakdown-list {
@@ -426,7 +463,14 @@
 
 /* --- Responsive --- */
 @media (max-width: 900px) {
-    .results-top-grid { grid-template-columns: 1fr; }
+    /* Lead with the score on small screens, then the written summary */
+    .results-overview {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "score"
+            "summary"
+            "breakdown";
+    }
     .metrics-strip { grid-template-columns: repeat(3, 1fr); }
     .findings-grid { grid-template-columns: 1fr; }
 }
@@ -466,6 +510,10 @@ html[data-theme="light"] .metric-tile {
 
 html[data-theme="light"] .metric-tile:hover {
     background: #f8fafc !important;
+}
+
+html[data-theme="light"] .example-banner {
+    background: rgba(56, 189, 248, 0.08);
 }
 
 html[data-theme="light"] .exec-summary-card {

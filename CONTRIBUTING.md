@@ -15,7 +15,8 @@ Thank you for your interest in contributing to ArchLens! I welcome all contribut
    ```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   pip install -e ".[dev]"
+   pip install -r requirements-dev.txt  # same tools and versions as CI
+   pip install -e ".[dev]"              # adds pre-commit
    ```
 4. **Install Pre-commit Hooks:**
    I use pre-commit to automatically check formatting and linting rules:

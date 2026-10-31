@@ -1,13 +1,23 @@
 {% extends "base.html" %}
 
 {% block title %}ArchLens &mdash; Repository Health Scoring{% endblock %}
-{% block meta_description %}ArchLens analyzes any public GitHub repository and delivers high-precision engineering scores across documentation, activity, organization, community, and maintainability.{% endblock %}
+{% block meta_description %}ArchLens analyzes any public GitHub repository and scores its engineering health from 0 to 100 across documentation, activity, organization, community, maintainability, security and code quality.{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/static/css/home.css?v=3" />
+<link rel="stylesheet" href="/static/css/home.css?v=4" />
 {% endblock %}
 
 {% block content %}
+
+{% set dimension_labels = [
+    ("documentation", "Documentation"),
+    ("activity", "Activity"),
+    ("organization", "Organization"),
+    ("community", "Community"),
+    ("maintainability", "Maintainability"),
+    ("security", "Security"),
+    ("code_quality", "Code Quality")
+] %}
 
 <!-- Hero Section -->
 <section class="hero hero-two-column">
@@ -18,45 +28,57 @@
         </div>
         <h1 class="hero-title">How resilient is your <span class="gradient-text">codebase?</span></h1>
         <p class="hero-subtitle">
-            Enter any public GitHub repository URL to evaluate engineering health across documentation, release velocity, architecture, and maintainability.
+            Paste a public GitHub repository to get a 0&ndash;100 engineering health score across seven dimensions, from documentation and release activity to security and code-quality tooling, with concrete next steps.
         </p>
 
         <!-- Analysis Form -->
         <form id="analyze-form" class="analyze-card" method="POST" action="/analyze">
-            <div class="form-grid">
-                <!-- Repo URL Input -->
-                <div class="form-group flex-2">
-                    <label class="form-label" for="repo-url">GitHub Repository URL</label>
-                    <div class="form-input-wrap">
-                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-                        </svg>
-                        <input
-                            id="repo-url"
-                            class="form-input form-input-with-icon"
-                            type="url"
-                            name="url"
-                            placeholder="https://github.com/fastapi/fastapi"
-                            required
-                            autocomplete="off"
-                            spellcheck="false"
-                        />
-                    </div>
+            <!-- Repo URL Input (full width) -->
+            <div class="form-group">
+                <label class="form-label" for="repo-url">GitHub repository</label>
+                <div class="form-input-wrap">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                    </svg>
+                    <input
+                        id="repo-url"
+                        class="form-input form-input-with-icon"
+                        type="text"
+                        name="url"
+                        value="{{ form_url }}"
+                        placeholder="owner/repo or GitHub URL"
+                        required
+                        autocomplete="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        inputmode="url"
+                        {% if error %}aria-invalid="true" aria-describedby="form-error"{% endif %}
+                    />
                 </div>
+            </div>
 
+            <!-- One-click examples -->
+            <div class="example-chips">
+                <span class="example-chips-label">Try</span>
+                {% for repo in example_repos %}
+                <button type="button" class="example-chip mono" data-repo="{{ repo }}">{{ repo }}</button>
+                {% endfor %}
+            </div>
+
+            <div class="form-row">
                 <!-- Profile Selector -->
-                <div class="form-group flex-1">
-                    <label class="form-label" for="repo-type">Repository Profile</label>
+                <div class="form-group form-group-profile">
+                    <label class="form-label" for="repo-type">Profile</label>
                     <div class="form-input-wrap">
-                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <polygon points="12 2 2 7 12 12 22 7 12 2" />
                             <polyline points="2 17 12 22 22 17" />
                             <polyline points="2 12 12 17 22 12" />
                         </svg>
                         <select id="repo-type" name="repo_type" class="form-input form-input-with-icon">
-                            <option value="library">Open Source Library</option>
-                            <option value="personal">Personal Project</option>
-                            <option value="enterprise">Enterprise App</option>
+                            {% for value, label in [("library", "Open Source Library"), ("personal", "Personal Project"), ("enterprise", "Enterprise App")] %}
+                            <option value="{{ value }}" {% if form_repo_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
@@ -65,7 +87,7 @@
                 <div class="form-btn-wrap">
                     <button id="analyze-btn" class="btn btn-primary btn-lg" type="submit">
                         <span id="btn-label">Analyze Repo</span>
-                        <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <line x1="5" y1="12" x2="19" y2="12" />
                             <polyline points="12 5 19 12 12 19" />
                         </svg>
@@ -74,9 +96,11 @@
                 </div>
             </div>
 
+            <p id="form-progress" class="form-progress" role="status" aria-live="polite"></p>
+
             {% if error %}
             <div class="alert alert-error mt-4" id="form-error" role="alert">
-                <svg style="width: 18px; height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg style="width: 18px; height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -99,52 +123,92 @@
     </div>
 
     <div class="hero-content-right">
-        <!-- Animated Glassmorphism Showcase -->
         <div class="glass-showcase">
             <div class="glass-blob glass-blob-1"></div>
             <div class="glass-blob glass-blob-2"></div>
-            <div class="glass-card main-glass-card floating">
+
+            {% if featured %}
+            {% set featured_tier = score_tier(featured.score) %}
+            <!-- Preview of a stored report (an example report when one is loaded) -->
+            <a href="/analysis/{{ featured.id }}" class="glass-card main-glass-card preview-card floating" id="featured-report">
                 <div class="glass-card-header">
                     <div class="glass-card-dots">
                         <span></span><span></span><span></span>
                     </div>
-                    <div class="glass-card-title">Analysis Overview</div>
+                    <div class="glass-card-title">{% if featured.is_example %}Example report{% else %}Latest report{% endif %}</div>
                 </div>
-                <div class="glass-card-body">
-                    <div class="glass-score-ring pulse-glow">
-                        <span class="glass-score-num">92</span>
+
+                <div class="preview-repo">
+                    <span class="preview-repo-name mono">{{ featured.repository.owner }}/{{ featured.repository.name }}</span>
+                    <span class="preview-date">Analyzed {{ featured.created_at.strftime("%b %d, %Y") }} &bull; {{ featured.repo_type|capitalize }} profile</span>
+                </div>
+
+                <div class="preview-score-row">
+                    <div class="preview-score">
+                        <span class="preview-score-num gauge-{{ featured_tier.key }}">{{ featured.score }}</span>
+                        <span class="preview-score-total mono">/100</span>
                     </div>
-                    <div class="glass-bars">
-                        <div class="glass-bar" style="width: 100%;"></div>
-                        <div class="glass-bar" style="width: 80%;"></div>
-                        <div class="glass-bar" style="width: 60%;"></div>
+                    <div class="preview-score-meta">
+                        {% if featured.metrics and featured.metrics.health_grade %}
+                        <span class="preview-grade">Grade {{ featured.metrics.health_grade }}</span>
+                        {% endif %}
+                        <span class="score-badge score-{{ featured_tier.key }} preview-tier">{{ featured_tier.label }}</span>
                     </div>
                 </div>
+
+                <ul class="preview-bars">
+                    {% for key, label in dimension_labels %}
+                    {% set val = featured_breakdown.get(key, 0) %}
+                    <li class="preview-bar-row">
+                        <span class="preview-bar-label">{{ label }}</span>
+                        <span class="preview-bar-track"><span class="preview-bar-fill bar-{{ score_tier(val / max_points[key] * 100).key }}" style="width: {{ (val / max_points[key] * 100)|int }}%;"></span></span>
+                        <span class="preview-bar-val mono">{{ val }}/{{ max_points[key] }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <span class="preview-cta">
+                    Open the full report
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                </span>
+            </a>
+            {% else %}
+            <!-- No reports stored yet: explain the pipeline instead of showing made-up numbers -->
+            <div class="glass-card main-glass-card how-card">
+                <div class="glass-card-header">
+                    <div class="glass-card-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div class="glass-card-title">How it works</div>
+                </div>
+                <ol class="how-steps">
+                    <li><strong>Fetch</strong> repository metadata, languages, contributors, recent commits and workflow files from the GitHub API, concurrently.</li>
+                    <li><strong>Score</strong> seven dimensions against the selected profile and combine them into a 0&ndash;100 score and grade.</li>
+                    <li><strong>Report</strong> strengths, concerns and next steps, saved so you can revisit them.</li>
+                </ol>
             </div>
-            <div class="glass-card mini-glass-card float-delayed">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                <span>Fully Secure</span>
-            </div>
+            {% endif %}
         </div>
     </div>
 </section>
 
-<!-- Security Section -->
+<!-- Privacy Section -->
 <section class="security-section">
     <div class="security-container">
         <div class="security-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
         </div>
         <div class="security-content">
-            <h3>Enterprise-Grade Security & Privacy</h3>
+            <h3>Read-only by design</h3>
             <p>
-                ArchLens operates entirely via the public GitHub API. I use strict <strong>read-only</strong> access,
-                and I <strong>never</strong> clone or store your actual source code files. Your intellectual property remains securely on GitHub's servers at all times.
+                ArchLens reads public metadata through the GitHub REST API: repository stats, the root file listing, languages, contributors, recent commits and workflow file names.
+                It <strong>never</strong> clones the repository or downloads source files, and it stores only the resulting scores and findings.
             </p>
         </div>
     </div>
@@ -157,14 +221,14 @@
 <section class="recent-section">
     <div class="section-header">
         <div class="section-header-left">
-            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
             <h2 class="section-title">Recent Scans</h2>
         </div>
         <a href="/history" class="btn btn-secondary btn-sm">
-            <span>View All Scans</span>
-            <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <span>View All</span>
+            <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <polyline points="9 18 15 12 9 6" />
             </svg>
         </a>
@@ -176,7 +240,7 @@
             <a href="/analysis/{{ item.id }}" class="scan-link">
                 <div class="scan-left">
                     <div class="scan-repo-avatar">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                             <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                         </svg>
@@ -184,19 +248,14 @@
                     <div class="scan-info">
                         <span class="scan-repo mono">{{ item.repository.owner }}/{{ item.repository.name }}</span>
                         <span class="scan-meta text-muted text-xs">
-                            Scanned {{ item.created_at.strftime("%b %d, %Y") }} &bull; {{ "%.2f"|format(item.duration) }}s
-                            &bull; Profile: <span class="profile-tag">{{ item.repo_type }}</span>
+                            {% if item.is_example %}<span class="example-tag">Example</span>{% endif %}
+                            {{ item.created_at.strftime("%b %d, %Y") }} &bull; {{ "%.2f"|format(item.duration) }}s
+                            &bull; <span class="profile-tag">{{ item.repo_type }}</span>
                         </span>
                     </div>
                 </div>
                 <div class="scan-score-wrap">
-                    {% if item.score >= 70 %}
-                    <span class="score-badge score-high">{{ item.score }}</span>
-                    {% elif item.score >= 40 %}
-                    <span class="score-badge score-mid">{{ item.score }}</span>
-                    {% else %}
-                    <span class="score-badge score-low">{{ item.score }}</span>
-                    {% endif %}
+                    <span class="score-badge score-{{ score_tier(item.score).key }}">{{ item.score }}</span>
                 </div>
             </a>
         </li>
@@ -206,14 +265,14 @@
 {% else %}
 <section class="empty-state">
     <div class="empty-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
     </div>
     <p class="empty-title">No analyses yet</p>
-    <p class="text-secondary text-sm">Paste a public GitHub URL above to run your first automated report.</p>
+    <p class="text-secondary text-sm">Enter a public repository above to run your first report.</p>
 </section>
 {% endif %}
 
@@ -221,18 +280,60 @@
 
 {% block scripts %}
 <script>
-    const form = document.getElementById('analyze-form');
-    const btn  = document.getElementById('analyze-btn');
-    const label  = document.getElementById('btn-label');
-    const arrow = document.querySelector('.btn-arrow');
-    const spinner = document.getElementById('btn-spinner');
+    (function () {
+        const form = document.getElementById('analyze-form');
+        const input = document.getElementById('repo-url');
+        const btn = document.getElementById('analyze-btn');
+        const label = document.getElementById('btn-label');
+        const arrow = btn.querySelector('.btn-arrow');
+        const spinner = document.getElementById('btn-spinner');
+        const progress = document.getElementById('form-progress');
+        const steps = [
+            'Fetching repository metadata from GitHub…',
+            'Reading languages, contributors and recent commits…',
+            'Checking project files and CI workflows…',
+            'Scoring seven engineering dimensions…',
+            'Saving the report…'
+        ];
+        let timer = null;
 
-    form.addEventListener('submit', function () {
-        label.textContent = 'Analyzing Repo...';
-        if (arrow) arrow.style.display = 'none';
-        spinner.style.display = 'block';
-        btn.disabled = true;
-        btn.style.opacity = '0.85';
-    });
+        function resetForm() {
+            clearInterval(timer);
+            timer = null;
+            label.textContent = 'Analyze Repo';
+            arrow.style.display = '';
+            spinner.style.display = 'none';
+            btn.disabled = false;
+            btn.removeAttribute('aria-busy');
+            progress.textContent = '';
+            progress.classList.remove('is-active');
+        }
+
+        form.addEventListener('submit', function () {
+            let step = 0;
+            label.textContent = 'Analyzing…';
+            arrow.style.display = 'none';
+            spinner.style.display = 'block';
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+            progress.textContent = steps[0];
+            progress.classList.add('is-active');
+            timer = setInterval(function () {
+                step = Math.min(step + 1, steps.length - 1);
+                progress.textContent = steps[step];
+                if (step === steps.length - 1) clearInterval(timer);
+            }, 1500);
+        });
+
+        document.querySelectorAll('.example-chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                input.value = chip.dataset.repo;
+                input.focus();
+            });
+        });
+
+        // Going Back restores this page from the bfcache with the button still busy
+        window.addEventListener('pageshow', resetForm);
+    })();
 </script>
 {% endblock %}

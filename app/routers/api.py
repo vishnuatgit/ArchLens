@@ -8,10 +8,10 @@ and external integrations.
 import json
 import logging
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_analysis_service, get_repository_service
+from app.dependencies import get_analysis_service, get_client_ip, get_repository_service
 from app.exceptions import AnalysisNotFoundError
 from app.models.db_models import Analysis
 from app.repositories.db import get_db
@@ -19,11 +19,13 @@ from app.schemas.schemas import (
     AnalysisDetailResponse,
     AnalysisSummaryResponse,
     AnalyzeApiRequest,
+    ErrorResponse,
     MetricApiResponse,
     PaginatedAnalysisResponse,
     RepositoryResponse,
 )
 from app.services.analysis_service import AnalysisService
+from app.services.metrics_service import RepoType
 from app.services.repository_service import RepositoryService
 
 logger = logging.getLogger("ArchLens.api")
@@ -66,6 +68,7 @@ def build_analysis_detail_response(analysis: Analysis) -> AnalysisDetailResponse
         ),
         duration=analysis.duration,
         repo_type=analysis.repo_type,
+        is_example=analysis.is_example,
         created_at=analysis.created_at,
         repository=RepositoryResponse.model_validate(analysis.repository),
         metrics=metrics_obj,
@@ -77,17 +80,36 @@ def build_analysis_detail_response(analysis: Analysis) -> AnalysisDetailResponse
     response_model=AnalysisDetailResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Trigger Repository Analysis",
-    description="Submits a public GitHub repository URL for automated multi-dimensional engineering analysis.",
+    description=(
+        "Submits a public GitHub repository URL for automated multi-dimensional engineering "
+        "analysis. Returns 201 with a new report, or 200 with a report of the same repository "
+        "and profile created within the last hour."
+    ),
+    responses={
+        200: {"model": AnalysisDetailResponse, "description": "Recent report reused"},
+        400: {"model": ErrorResponse, "description": "Invalid repository URL"},
+        404: {"model": ErrorResponse, "description": "Repository not found on GitHub"},
+        422: {"description": "Empty repository, or invalid request body"},
+        429: {"model": ErrorResponse, "description": "Too many analyses from this client"},
+        502: {"model": ErrorResponse, "description": "GitHub returned an error"},
+        503: {"model": ErrorResponse, "description": "GitHub API rate limit exhausted"},
+    },
 )
 async def analyze_repository(
     payload: AnalyzeApiRequest,
+    response: Response,
     db: Session = Depends(get_db),
     analysis_svc: AnalysisService = Depends(get_analysis_service),
     repo_svc: RepositoryService = Depends(get_repository_service),
+    client_ip: str = Depends(get_client_ip),
 ):
     """Executes a full repository scan and returns the complete analysis report."""
     logger.info(f"API Trigger: Analyzing {payload.url} (Profile: {payload.repo_type})")
-    result = await analysis_svc.run(db=db, url=payload.url, repo_type=payload.repo_type)
+    result = await analysis_svc.run(
+        db=db, url=payload.url, repo_type=payload.repo_type, client_id=client_ip
+    )
+    if result.get("reused"):
+        response.status_code = status.HTTP_200_OK
     analysis = repo_svc.get_analysis_by_id(db, result["analysis_id"])
     if not analysis:
         raise AnalysisNotFoundError(result["analysis_id"])
@@ -121,7 +143,7 @@ async def get_analysis_by_id(
 async def list_analyses(
     offset: int = Query(0, ge=0, description="Offset pagination index"),
     limit: int = Query(20, ge=1, le=100, description="Page limit size"),
-    repo_type: str | None = Query(None, description="Filter by repository profile"),
+    repo_type: RepoType | None = Query(None, description="Filter by repository profile"),
     min_score: int | None = Query(None, ge=0, le=100, description="Filter by minimum health score"),
     db: Session = Depends(get_db),
 ):
@@ -142,6 +164,7 @@ async def list_analyses(
             health_grade=getattr(r.metrics, "health_grade", "C") if r.metrics else "C",
             duration=r.duration,
             repo_type=r.repo_type,
+            is_example=r.is_example,
             created_at=r.created_at,
             repo_owner=r.repository.owner,
             repo_name=r.repository.name,

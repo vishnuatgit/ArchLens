@@ -17,7 +17,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
 from app.dependencies import get_analysis_service
-from app.exceptions import InvalidRepositoryURLError, RateLimitExceededError
+from app.exceptions import (
+    EmptyRepositoryError,
+    InvalidRepositoryURLError,
+    RateLimitExceededError,
+    RepositoryNotFoundError,
+    TooManyAnalysesError,
+    UpstreamServiceError,
+)
 from app.models.db_models import Analysis, Metric, Repository
 from app.repositories.db import Base, get_db
 from app.services.analysis_service import AnalysisService
@@ -196,3 +203,54 @@ class TestApiHealth:
         data = response.json()
         assert data["status"] == "healthy"
         assert data["service"] == "ArchLens REST API"
+
+
+class TestApiErrors:
+    @pytest.mark.parametrize(
+        ("error", "status_code", "error_code"),
+        [
+            (RepositoryNotFoundError("owner", "nope"), 404, "REPO_NOT_FOUND"),
+            (EmptyRepositoryError("owner", "empty"), 422, "EMPTY_REPOSITORY"),
+            (UpstreamServiceError("HTTP 401"), 502, "GITHUB_UNAVAILABLE"),
+            (TooManyAnalysesError(5, 600, 90), 429, "TOO_MANY_ANALYSES"),
+        ],
+    )
+    def test_application_errors_return_json(self, client, error, status_code, error_code):
+        mock_service = AsyncMock(spec=AnalysisService)
+        mock_service.run = AsyncMock(side_effect=error)
+        app.dependency_overrides[get_analysis_service] = lambda: mock_service
+
+        response = client.post("/api/v1/analyze", json={"url": "owner/repo"})
+        assert response.status_code == status_code
+        data = response.json()
+        assert data["error_code"] == error_code
+        assert data["status_code"] == status_code
+        assert data["error"]
+
+    def test_too_many_analyses_sets_retry_after(self, client):
+        mock_service = AsyncMock(spec=AnalysisService)
+        mock_service.run = AsyncMock(side_effect=TooManyAnalysesError(5, 600, 90))
+        app.dependency_overrides[get_analysis_service] = lambda: mock_service
+
+        response = client.post("/api/v1/analyze", json={"url": "owner/repo"})
+        assert response.headers["retry-after"] == "90"
+
+    def test_unknown_repo_type_is_a_validation_error(self, client):
+        response = client.post(
+            "/api/v1/analyze", json={"url": "psf/requests", "repo_type": "banana"}
+        )
+        assert response.status_code == 422
+
+    def test_list_filter_rejects_unknown_repo_type(self, client):
+        assert client.get("/api/v1/analyses?repo_type=banana").status_code == 422
+
+    def test_reused_analysis_returns_200(self, client, seeded_analysis):
+        mock_service = AsyncMock(spec=AnalysisService)
+        mock_service.run = AsyncMock(
+            return_value={"analysis_id": seeded_analysis.id, "reused": True}
+        )
+        app.dependency_overrides[get_analysis_service] = lambda: mock_service
+
+        response = client.post("/api/v1/analyze", json={"url": "fastapi/fastapi"})
+        assert response.status_code == 200
+        assert response.json()["is_example"] is False

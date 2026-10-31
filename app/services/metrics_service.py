@@ -1,8 +1,74 @@
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger("ArchLens.metrics_service")
+
+
+class RepoType(StrEnum):
+    """Repository evaluation profiles supported by the scoring engine."""
+
+    LIBRARY = "library"
+    PERSONAL = "personal"
+    ENTERPRISE = "enterprise"
+
+
+@dataclass(frozen=True)
+class ScoreTier:
+    """A named score band; `key` doubles as the CSS modifier (score-high, gauge-high...)."""
+
+    key: str
+    label: str
+    min_score: int
+
+
+# Single source of truth for score bands, used by the executive summary,
+# the web templates and the CLI. Ordered from highest to lowest.
+SCORE_TIERS = (
+    ScoreTier("high", "Strong Codebase", 70),
+    ScoreTier("mid", "Moderate Health", 40),
+    ScoreTier("low", "Needs Optimization", 0),
+)
+
+# Maximum points per dimension (they add up to 100)
+DIMENSION_MAX_POINTS = {
+    "documentation": 15,
+    "activity": 15,
+    "organization": 15,
+    "community": 15,
+    "maintainability": 15,
+    "security": 12,
+    "code_quality": 13,
+}
+
+# GitHub list endpoints are read one page at a time, so counts stop at this value
+API_PAGE_CAP = 100
+
+
+def score_tier(score: float) -> ScoreTier:
+    """Returns the tier for a 0-100 score."""
+    for tier in SCORE_TIERS:
+        if score >= tier.min_score:
+            return tier
+    return SCORE_TIERS[-1]
+
+
+def format_capped_count(count: int, cap: int = API_PAGE_CAP) -> str:
+    """Formats a count read from a single API page, e.g. 100 -> '100+'."""
+    return f"{count:,}+" if count >= cap else f"{count:,}"
+
+
+def _as_clause(finding: str) -> str:
+    """
+    Turns a finding sentence into a clause that can be embedded in a summary:
+    drops the final period and lowercases the first word unless it is an acronym.
+    """
+    text = finding.strip().rstrip(".")
+    if len(text) > 1 and text[0].isupper() and not text[1].isupper():
+        text = text[0].lower() + text[1:]
+    return text
 
 
 class MetricsService:
@@ -94,7 +160,9 @@ class MetricsService:
         commit_count = len(recent_commits)
         if commit_count >= 10:
             score += 8
-            strengths.append(f"High commit activity: {commit_count} commits in the last 30 days.")
+            strengths.append(
+                f"High commit activity: {format_capped_count(commit_count)} commits in the last 30 days."
+            )
         elif commit_count >= 3:
             score += 4
             strengths.append(
@@ -226,7 +294,7 @@ class MetricsService:
 
         if stars >= 50:
             score += 5
-            strengths.append(f"Strong community interest with {stars} stars.")
+            strengths.append(f"Strong community interest with {stars:,} stars.")
         elif stars >= 10:
             score += 3
             strengths.append(f"Growing community interest with {stars} stars.")
@@ -236,7 +304,7 @@ class MetricsService:
 
         if forks >= 20:
             score += 5
-            strengths.append(f"High fork count ({forks}).")
+            strengths.append(f"High fork count ({forks:,}).")
         elif forks >= 5:
             score += 3
             strengths.append(f"Moderate fork activity ({forks} forks).")
@@ -245,7 +313,9 @@ class MetricsService:
 
         if contributor_count >= 5:
             score += 5
-            strengths.append(f"Active contributor base with {contributor_count} contributors.")
+            strengths.append(
+                f"Active contributor base with {format_capped_count(contributor_count)} contributors."
+            )
         elif contributor_count >= 2:
             score += 3
             strengths.append(f"Small active contributor group ({contributor_count} contributors).")
@@ -288,7 +358,7 @@ class MetricsService:
             score += 2
             strengths.append(f"Manageable open issue count ({open_issues} issues).")
         else:
-            weaknesses.append(f"High open issue count ({open_issues}).")
+            weaknesses.append(f"High open issue count ({open_issues:,}).")
 
         repo_size_kb = metadata.get("size", 0) or 0
         if repo_size_kb <= 50000:
@@ -486,23 +556,24 @@ class MetricsService:
         """
         Generates a concise 2-3 sentence natural language executive summary.
         """
-        tier = (
-            "production-grade"
-            if score >= 80
-            else "moderate-health" if score >= 60 else "needs optimization"
-        )
+        tier = score_tier(score)
         profile_label = "open-source library" if repo_type == "library" else f"{repo_type} project"
 
         summary = (
-            f"This repository scored {score}/100 (Grade: {grade}) evaluated as a {tier} {profile_label}. "
-            f"Key strengths include {strengths[0].lower() if strengths else 'a clean structure'} "
-            f"and {strengths[1].lower() if len(strengths) > 1 else 'active maintenance'}. "
+            f"This {profile_label} scored {score}/100 (Grade: {grade}), "
+            f"placing it in the {tier.label} tier."
         )
 
+        top_strengths = [_as_clause(s) for s in strengths[:2]]
+        if len(top_strengths) == 2:
+            summary += f" Key strengths: {top_strengths[0]}; {top_strengths[1]}."
+        elif top_strengths:
+            summary += f" Key strength: {top_strengths[0]}."
+
         if weaknesses:
-            summary += f"Primary area for improvement: {weaknesses[0].lower()}."
+            summary += f" Primary area for improvement: {_as_clause(weaknesses[0])}."
         else:
-            summary += "No critical weaknesses were identified across analyzed dimensions."
+            summary += " No critical weaknesses were identified across analyzed dimensions."
 
         return summary
 

@@ -4,10 +4,12 @@
 {% block meta_description %}Engineering analysis for {{ owner }}/{{ name }}. Overall score: {{ score }}/100 across documentation, activity, organization, community, and maintainability.{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/static/css/results.css?v=2" />
+<link rel="stylesheet" href="/static/css/results.css?v=3" />
 {% endblock %}
 
 {% block content %}
+
+{% set tier = score_tier(score) %}
 
 <!-- Page Header -->
 <div class="results-header">
@@ -29,7 +31,7 @@
                 <span class="profile-badge profile-{{ repo_type }}">{{ repo_type }}</span>
             </div>
             <p class="results-sub text-secondary text-sm">
-                Scanned {{ created_at.strftime("%B %d, %Y at %H:%M UTC") }}
+                Analyzed {{ created_at.strftime("%B %d, %Y at %H:%M UTC") }}
                 &bull; Duration {{ "%.2f"|format(duration) }}s
             </p>
         </div>
@@ -52,28 +54,48 @@
     </div>
 </div>
 
-{% if executive_summary %}
-<!-- Executive Summary Card -->
-<div class="card exec-summary-card mb-6">
-    <div class="card-header">
-        <div class="findings-title-wrap">
-            <svg class="findings-icon text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-            </svg>
-            <span class="card-title">Executive Health Summary</span>
-        </div>
-        <span class="grade-badge grade-{{ health_grade|lower|replace('+', 'plus') }}">{{ health_grade }}</span>
-    </div>
-    <p class="exec-summary-text">{{ executive_summary }}</p>
+{% if is_example %}
+<!-- Example reports are bundled with the app; say so and offer a live re-run -->
+<div class="example-banner mb-6" role="note">
+    <svg class="example-banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+    <p class="example-banner-text">
+        <strong>Example report.</strong>
+        Captured from live GitHub data on {{ created_at.strftime("%B %d, %Y") }}, so the numbers reflect that date.
+    </p>
+    <form method="POST" action="/analyze" class="example-banner-form">
+        <input type="hidden" name="url" value="{{ owner }}/{{ name }}" />
+        <input type="hidden" name="repo_type" value="{{ repo_type }}" />
+        <button type="submit" class="btn btn-secondary btn-sm">Run a fresh analysis</button>
+    </form>
 </div>
 {% endif %}
 
-<!-- Score + Breakdown Grid -->
-<div class="results-top-grid">
+<!-- Overview: summary, gauge and breakdown share one grid so small screens show the score first -->
+<div class="results-overview">
+
+    {% if executive_summary %}
+    <!-- Executive Summary Card -->
+    <div class="card exec-summary-card">
+        <div class="card-header">
+            <div class="findings-title-wrap">
+                <svg class="findings-icon text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <span class="card-title">Executive Health Summary</span>
+            </div>
+            <span class="grade-badge grade-{{ health_grade|lower|replace('+', 'plus') }}">{{ health_grade }}</span>
+        </div>
+        <p class="exec-summary-text">{{ executive_summary }}</p>
+    </div>
+    {% endif %}
 
     <!-- Overall Score Gauge -->
     <div class="card score-card">
@@ -88,22 +110,12 @@
                     style="--score: {{ score }};" />
             </svg>
             <div class="gauge-label">
-                <span class="gauge-number
-                    {% if score >= 70 %}gauge-high
-                    {% elif score >= 40 %}gauge-mid
-                    {% else %}gauge-low{% endif %}">{{ score }}</span>
+                <span class="gauge-number gauge-{{ tier.key }}">{{ score }}</span>
                 <span class="gauge-total">/100</span>
             </div>
         </div>
 
-        <div class="score-tier-label
-            {% if score >= 70 %}tier-strong
-            {% elif score >= 40 %}tier-moderate
-            {% else %}tier-weak{% endif %}">
-            {% if score >= 70 %}Strong Codebase
-            {% elif score >= 40 %}Moderate Health
-            {% else %}Needs Optimization{% endif %}
-        </div>
+        <div class="score-tier-label tier-{{ tier.key }}">{{ tier.label }}</div>
     </div>
 
     <!-- Dimension Breakdown -->
@@ -111,13 +123,13 @@
         <p class="card-title">Engineering Dimension Breakdown</p>
         <ul class="breakdown-list">
             {% set dims = [
-                ("Documentation", breakdown.get("documentation", 0), 15, "doc"),
-                ("Activity",      breakdown.get("activity", 0),      15, "act"),
-                ("Organization",  breakdown.get("organization", 0),  15, "org"),
-                ("Community",     breakdown.get("community", 0),     15, "com"),
-                ("Maintainability", breakdown.get("maintainability", 0), 15, "mnt"),
-                ("Security",      breakdown.get("security", 0),      12, "sec"),
-                ("Code Quality",  breakdown.get("code_quality", 0),  13, "qlty")
+                ("Documentation", breakdown.get("documentation", 0), max_points["documentation"], "doc"),
+                ("Activity",      breakdown.get("activity", 0),      max_points["activity"], "act"),
+                ("Organization",  breakdown.get("organization", 0),  max_points["organization"], "org"),
+                ("Community",     breakdown.get("community", 0),     max_points["community"], "com"),
+                ("Maintainability", breakdown.get("maintainability", 0), max_points["maintainability"], "mnt"),
+                ("Security",      breakdown.get("security", 0),      max_points["security"], "sec"),
+                ("Code Quality",  breakdown.get("code_quality", 0),  max_points["code_quality"], "qlty")
             ] %}
             {% for label, val, max_val, key in dims %}
             <li class="breakdown-row">
@@ -129,10 +141,7 @@
                     <span class="breakdown-val mono">{{ val }}<span class="text-muted">/{{ max_val }}</span></span>
                 </div>
                 <div class="progress-bar-wrap">
-                    <div class="progress-bar-fill
-                        {% if (val / max_val) >= 0.7 %}bar-high
-                        {% elif (val / max_val) >= 0.4 %}bar-mid
-                        {% else %}bar-low{% endif %}"
+                    <div class="progress-bar-fill bar-{{ score_tier(val / max_val * 100).key }}"
                         style="width: {{ (val / max_val * 100)|int }}%;">
                     </div>
                 </div>
@@ -152,7 +161,7 @@
             </svg>
             <span class="metric-label">Stars</span>
         </div>
-        <span class="metric-value">{{ stars }}</span>
+        <span class="metric-value" title="{{ '{:,}'.format(stars) }} stars">{{ stars|compact }}</span>
     </div>
 
     <div class="metric-tile">
@@ -166,7 +175,7 @@
             </svg>
             <span class="metric-label">Forks</span>
         </div>
-        <span class="metric-value">{{ forks }}</span>
+        <span class="metric-value" title="{{ '{:,}'.format(forks) }} forks">{{ forks|compact }}</span>
     </div>
 
     <div class="metric-tile">
@@ -178,7 +187,7 @@
             </svg>
             <span class="metric-label">Open Issues</span>
         </div>
-        <span class="metric-value">{{ open_issues }}</span>
+        <span class="metric-value" title="{{ '{:,}'.format(open_issues) }} open issues and pull requests">{{ open_issues|compact }}</span>
     </div>
 
     <div class="metric-tile">
@@ -191,7 +200,11 @@
             </svg>
             <span class="metric-label">Contributors</span>
         </div>
+        {% if contributor_count >= api_page_cap %}
+        <span class="metric-value" title="GitHub returns contributors one page at a time; this repository has at least {{ api_page_cap }}">{{ api_page_cap }}+</span>
+        {% else %}
         <span class="metric-value">{{ contributor_count }}</span>
+        {% endif %}
     </div>
 
     <div class="metric-tile">
@@ -203,7 +216,7 @@
             </svg>
             <span class="metric-label">Disk Size</span>
         </div>
-        <span class="metric-value">{{ (repo_size / 1024)|round(1) }} MB</span>
+        <span class="metric-value">{{ repo_size|size_kb }}</span>
     </div>
 
     <div class="metric-tile">
@@ -349,17 +362,17 @@
 {{ executive_summary }}
 {% endif %}
 ## Key Metrics
-- **Stars:** {{ stars }} | **Forks:** {{ forks }} | **Open Issues:** {{ open_issues }}
-- **Contributors:** {{ contributor_count }} | **Size:** {{ (repo_size / 1024)|round(1) }} MB
+- **Stars:** {{ '{:,}'.format(stars) }} | **Forks:** {{ '{:,}'.format(forks) }} | **Open Issues:** {{ '{:,}'.format(open_issues) }}
+- **Contributors:** {{ contributor_count }}{% if contributor_count >= api_page_cap %}+{% endif %} | **Size:** {{ repo_size|size_kb }}
 
 ## Dimension Breakdown
-- Documentation: {{ breakdown.get("documentation", 0) }}/15
-- Activity: {{ breakdown.get("activity", 0) }}/15
-- Organization: {{ breakdown.get("organization", 0) }}/15
-- Community: {{ breakdown.get("community", 0) }}/15
-- Maintainability: {{ breakdown.get("maintainability", 0) }}/15
-- Security: {{ breakdown.get("security", 0) }}/12
-- Code Quality: {{ breakdown.get("code_quality", 0) }}/13
+- Documentation: {{ breakdown.get("documentation", 0) }}/{{ max_points["documentation"] }}
+- Activity: {{ breakdown.get("activity", 0) }}/{{ max_points["activity"] }}
+- Organization: {{ breakdown.get("organization", 0) }}/{{ max_points["organization"] }}
+- Community: {{ breakdown.get("community", 0) }}/{{ max_points["community"] }}
+- Maintainability: {{ breakdown.get("maintainability", 0) }}/{{ max_points["maintainability"] }}
+- Security: {{ breakdown.get("security", 0) }}/{{ max_points["security"] }}
+- Code Quality: {{ breakdown.get("code_quality", 0) }}/{{ max_points["code_quality"] }}
 
 {% if strengths %}## Key Strengths
 {% for item in strengths %}- {{ item }}

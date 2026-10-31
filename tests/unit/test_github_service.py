@@ -4,9 +4,12 @@ import httpx
 import pytest
 
 from app.services.github_service import (
+    GitHubAPIError,
+    GitHubEmptyRepositoryError,
     GitHubNotFoundError,
     GitHubRateLimitError,
     GitHubService,
+    canonical_github_url,
     parse_github_url,
 )
 
@@ -154,3 +157,117 @@ async def test_fetch_contents_not_found():
 
         result = await service.fetch_contents("owner", "repo", "tests/nonexistent-folder")
         assert result == []
+
+
+def test_parse_github_url_normalises_variants():
+    # Trailing slash, .git, www., scheme-less, extra path segments and bare owner/repo
+    for url in [
+        "https://github.com/psf/requests/",
+        "https://github.com/psf/requests.git",
+        "https://www.github.com/psf/requests",
+        "HTTPS://GITHUB.COM/psf/requests",
+        "github.com/psf/requests/tree/main/src",
+        "https://github.com/psf/requests?tab=readme-ov-file",
+        "  psf/requests  ",
+    ]:
+        assert parse_github_url(url) == ("psf", "requests"), url
+
+
+def test_parse_github_url_rejects_unsafe_names():
+    for url in [
+        "psf",
+        "psf/requests/extra",
+        "../..",
+        "https://github.com/psf/..",
+        "https://github.com/psf/re quests",
+        "https://gitlab.com/psf/requests",
+        "https://github.com/psf%2F/requests",
+    ]:
+        assert parse_github_url(url) == (None, None), url
+
+
+def test_canonical_github_url():
+    assert canonical_github_url("psf", "requests") == "https://github.com/psf/requests"
+
+
+def _service_with_responses(*responses: httpx.Response) -> tuple[GitHubService, list[str]]:
+    """Builds a service whose shared client answers from a fixed list of responses."""
+    queue = list(responses)
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.path)
+        return queue.pop(0)
+
+    service = GitHubService()
+    service._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    return service, seen
+
+
+@pytest.mark.anyio
+async def test_status_429_is_a_rate_limit_with_retry_after():
+    service, _ = _service_with_responses(httpx.Response(429, headers={"Retry-After": "120"}))
+
+    with pytest.raises(GitHubRateLimitError) as exc_info:
+        await service.fetch_repo_metadata("owner", "repo")
+    assert exc_info.value.status_code == 429
+    assert exc_info.value.reset_time is not None
+
+
+@pytest.mark.anyio
+async def test_secondary_rate_limit_403_is_detected_from_message():
+    service, _ = _service_with_responses(
+        httpx.Response(403, json={"message": "You have exceeded a secondary rate limit."})
+    )
+
+    with pytest.raises(GitHubRateLimitError):
+        await service.fetch_repo_metadata("owner", "repo")
+
+
+@pytest.mark.anyio
+async def test_status_409_on_commits_means_empty_repository():
+    service, _ = _service_with_responses(
+        httpx.Response(409, json={"message": "Git Repository is empty."})
+    )
+
+    with pytest.raises(GitHubEmptyRepositoryError):
+        await service.fetch_recent_commits("owner", "empty", since_iso="2026-01-01T00:00:00Z")
+
+
+@pytest.mark.anyio
+async def test_unexpected_status_raises_api_error_with_status_code():
+    service, _ = _service_with_responses(httpx.Response(401, json={"message": "Bad credentials"}))
+
+    with pytest.raises(GitHubAPIError) as exc_info:
+        await service.fetch_repo_metadata("owner", "repo")
+    assert exc_info.value.status_code == 401
+    assert not isinstance(exc_info.value, GitHubRateLimitError)
+
+
+@pytest.mark.anyio
+async def test_requests_share_one_client_until_closed():
+    service, seen = _service_with_responses(
+        httpx.Response(200, json={"full_name": "owner/repo"}),
+        httpx.Response(200, json={"Python": 10}),
+    )
+    client = service.client
+
+    await service.fetch_repo_metadata("owner", "repo")
+    await service.fetch_languages("owner", "repo")
+
+    assert service.client is client
+    assert seen == ["/repos/owner/repo", "/repos/owner/repo/languages"]
+
+    await service.aclose()
+    assert client.is_closed
+    assert service._client is None
+
+
+@pytest.mark.anyio
+async def test_start_opens_client_once():
+    service = GitHubService()
+    service.start()
+    client = service.client
+    service.start()
+    assert service.client is client
+    await service.aclose()

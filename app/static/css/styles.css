@@ -153,10 +153,18 @@ html[data-theme="light"] .form-input {
     color: #0f172a !important;
 }
 
+/* The shorthand above would otherwise drop the select's chevron */
+html[data-theme="light"] select.form-input {
+    background: #f1f5f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 14px center !important;
+}
+
 html[data-theme="light"] .scan-item,
 html[data-theme="light"] .history-row {
     background: #ffffff !important;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-theme="light"] .history-item {
+    border-bottom-color: rgba(15, 23, 42, 0.08) !important;
 }
 
 html[data-theme="light"] .scan-item:hover,
@@ -174,8 +182,13 @@ html[data-theme="light"] .footer {
 }
 
 html[data-theme="light"] .footer-text,
-html[data-theme="light"] .footer-meta {
-    color: #64748b !important;
+html[data-theme="light"] .footer-links a {
+    color: #475569 !important;
+}
+
+html[data-theme="light"] .footer-text a,
+html[data-theme="light"] .footer-links a:hover {
+    color: #4f46e5 !important;
 }
 
 html[data-theme="light"] .card-header {
@@ -400,6 +413,11 @@ img { display: block; max-width: 100%; }
     stroke: var(--accent-cyan);
 }
 
+.theme-toggle-btn {
+    background: none;
+    cursor: pointer;
+}
+
 /* --- Cards / Glass Surfaces --- */
 .card {
     background: var(--bg-surface);
@@ -468,6 +486,10 @@ img { display: block; max-width: 100%; }
 
 .btn:active {
     transform: scale(0.97);
+}
+
+.btn:disabled {
+    cursor: progress;
 }
 
 .btn-primary {
@@ -602,6 +624,10 @@ select.form-input {
 .score-mid    { background: var(--amber-dim);  color: var(--amber); border-color: rgba(251, 191, 36, 0.3); }
 .score-low    { background: var(--red-dim);    color: var(--red);   border-color: rgba(244, 63, 94, 0.3); }
 
+.gauge-high { color: var(--green); text-shadow: 0 0 16px rgba(52, 211, 153, 0.4); }
+.gauge-mid  { color: var(--amber); text-shadow: 0 0 16px rgba(251, 191, 36, 0.4); }
+.gauge-low  { color: var(--red);   text-shadow: 0 0 16px rgba(244, 63, 94, 0.4); }
+
 /* --- Progress Bar --- */
 .progress-bar-wrap {
     height: 8px;
@@ -727,10 +753,26 @@ select.form-input {
     font-weight: 500;
 }
 
-.footer-meta {
-    font-family: var(--font-mono);
-    font-size: 0.775rem;
-    color: var(--text-muted);
+.footer-text a {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+}
+
+.footer-links a {
+    font-size: 0.825rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.footer-links a:hover,
+.footer-text a:hover {
+    color: var(--accent-cyan);
 }
 
 /* --- Loading Spinner --- */
@@ -754,6 +796,16 @@ select.form-input {
     .nav-links { gap: var(--space-1); }
     .nav-link { padding: 6px 12px; font-size: 0.8rem; }
     .footer-inner { flex-direction: column; align-items: center; text-align: center; }
+    .footer-links { justify-content: center; }
+}
+
+/* Narrow phones: icon-only navigation so the bar fits without scrolling */
+@media (max-width: 480px) {
+    .container { padding: 0 var(--space-4); }
+    .nav-label { display: none; }
+    .nav-link { padding: 8px 10px; }
+    .nav-icon { width: 18px; height: 18px; opacity: 0.85; }
+    .nav-brand { font-size: 1.15rem; gap: var(--space-2); }
 }
 
 /* --- Shared Badges & Dots --- */
@@ -842,4 +894,50 @@ html[data-theme="light"] .profile-enterprise { color: #b45309; }
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: var(--space-2);
+}
+
+/* --- Example Report Tag --- */
+.example-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 99px;
+    font-family: var(--font-heading);
+    font-size: 0.675rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-cyan);
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+html[data-theme="light"] .example-tag { color: #0369a1; }
+
+/* --- Error Pages --- */
+.error-code {
+    font-size: 3rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+}
+
+.error-message {
+    margin-bottom: var(--space-8);
+}
+
+.error-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* --- Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
