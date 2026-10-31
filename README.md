@@ -6,7 +6,6 @@ A FastAPI web app, REST API and CLI. It reads a repository's metadata through th
 
 [![CI](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Live demo:** not deployed yet, so [run it locally](#run-locally) in a minute · REST API docs at `/docs` · [How it works](#how-it-works) · [Process flows](docs/process-flows.md)
 
@@ -250,6 +249,6 @@ ArchLens/
 - **Renames are learned.** An old repository name finds the new name's reports only after it has been analyzed once under the old name.
 - **Ephemeral demo storage.** On the free host, reports other than the bundled examples (and the badges that point at them) disappear when the service restarts, until someone analyzes the repository again.
 
-## License
+## Author
 
-MIT. See [LICENSE](LICENSE).
+Built by Chandana Vishnu Jayanth · [Portfolio](https://vishnuatgit.github.io)
