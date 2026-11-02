@@ -252,7 +252,7 @@ ArchLens/
 
 ## Author
 
-Built by Chandana Vishnu Jayanth · [Portfolio](https://vishnuatgit.github.io)
+Built by Chandana Vishnu Jayanth · [Portfolio](https://vishnuatgit.github.io) · [Case study](https://vishnuatgit.github.io/projects/archlens.html) ([PDF](https://vishnuatgit.github.io/pdf/archlens-case-study.pdf))
 
 ## License
 
