@@ -6,6 +6,7 @@ A FastAPI web app, REST API and CLI. It reads a repository's metadata through th
 
 [![CI](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Live demo:** [archlens-xhxr.onrender.com](https://archlens-xhxr.onrender.com) (free hosting: the first visit can take about a minute to wake it up) · REST API docs at `/docs` · [How it works](#how-it-works) · [Process flows](docs/process-flows.md)
 
@@ -252,3 +253,7 @@ ArchLens/
 ## Author
 
 Built by Chandana Vishnu Jayanth · [Portfolio](https://vishnuatgit.github.io)
+
+## License
+
+[MIT](LICENSE) © 2026 Chandana Vishnu Jayanth
