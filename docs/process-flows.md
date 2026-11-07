@@ -454,3 +454,25 @@ flowchart TD
 * **Stale names:** a repository's own URL is never kept as an alias. If someone later creates a new repository at the old address and it is analyzed, `record_rename()` deletes that alias, so the old name stops redirecting.
 * **Limit:** renames are learned, not looked up: the old name finds the new reports only after it has been analyzed once under the old name (looking renames up would cost a GitHub call on every permalink or badge request).
 * **Tests:** `tests/integration/test_user_flows.py` (`TestRenamedRepositories`) and `test_the_requested_name_of_a_renamed_repository_is_recorded` in `tests/unit/test_analysis_service.py`.
+
+---
+
+## 18. Dependencies and known vulnerabilities
+
+Part of `AnalysisService.run()`, after the six GitHub calls and before scoring (`app/services/dependency_service.py`).
+
+```mermaid
+flowchart TD
+    R["Root file listing<br/>(already fetched)"] --> M["select_manifests()<br/>requirements*.txt, pyproject.toml,<br/>package.json + lockfile, go.mod"]
+    M --> G["1 to 6 GitHub requests<br/>(raw file text)"]
+    G --> P["Parsers: dependency, version, pinned?"]
+    P --> O["OSV.dev: one batch request,<br/>then one request per advisory"]
+    O --> D[("metrics.dependencies_json")]
+    G -. fails .-> E["status error"]
+    O -. fails .-> U["couldn't check"]
+    E --> D
+    U --> D
+    D --> V["Report page, JSON API, Markdown, CLI"]
+```
+
+A failure at either step is recorded in the scan and never fails the analysis. The score is not affected. Reports stored before the feature existed have no scan and say "Not scanned".

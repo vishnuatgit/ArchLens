@@ -154,19 +154,23 @@ class GitHubService:
         return self._client
 
     async def _make_request(
-        self, method: str, path: str, params: dict[str, Any] | None = None
+        self, method: str, path: str, params: dict[str, Any] | None = None, raw: bool = False
     ) -> Any:
         """
         Executes an HTTP request to the GitHub API, handling rate limits and retries on transient errors.
+        With raw=True the response is a file's text (GitHub's raw media type) instead of JSON.
         """
         url = f"{self.base_url}{path}"
         max_retries = 3
         backoff_factor = 1.5
+        headers = (
+            {**self.headers, "Accept": "application/vnd.github.raw+json"} if raw else self.headers
+        )
 
         for attempt in range(max_retries):
             try:
                 response = await self.client.request(
-                    method, url, headers=self.headers, params=params, timeout=REQUEST_TIMEOUT
+                    method, url, headers=headers, params=params, timeout=REQUEST_TIMEOUT
                 )
 
                 # Check for rate limiting
@@ -191,7 +195,7 @@ class GitHubService:
                 if response.status_code == 204:
                     return None
 
-                return response.json()
+                return response.text if raw else response.json()
 
             except httpx.HTTPStatusError as e:
                 status_code = e.response.status_code
@@ -281,3 +285,16 @@ class GitHubService:
             )
         except GitHubNotFoundError:
             return []
+
+    async def fetch_file_text(self, owner: str, repo: str, path: str) -> str | None:
+        """
+        Fetches one file's text, or None when it does not exist.
+        Endpoint: GET /repos/{owner}/{repo}/contents/{path} with the raw media type,
+        which returns the file itself (no base64, and files above 1 MB work too).
+        """
+        try:
+            return await self._make_request(
+                "GET", f"/repos/{owner}/{repo}/contents/{path}", raw=True
+            )
+        except GitHubNotFoundError:
+            return None

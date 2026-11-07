@@ -22,12 +22,14 @@ from app.schemas.schemas import (
     AnalysisDetailResponse,
     AnalysisSummaryResponse,
     AnalyzeApiRequest,
+    DependencyScanResponse,
     ErrorResponse,
     MetricApiResponse,
     PaginatedAnalysisResponse,
     RepositoryResponse,
 )
 from app.services.analysis_service import AnalysisService
+from app.services.dependency_service import DependencyScan
 from app.services.github_service import parse_github_url
 from app.services.metrics_service import RepoType, grade_for_score
 from app.services.report_export import report_to_markdown
@@ -87,6 +89,9 @@ def build_analysis_detail_response(analysis: Analysis) -> AnalysisDetailResponse
             suggestions=json.loads(m.suggestions_json or "[]"),
         )
 
+    scan = (
+        DependencyScan.from_json(analysis.metrics.dependencies_json) if analysis.metrics else None
+    )
     return AnalysisDetailResponse(
         id=analysis.id,
         score=analysis.score,
@@ -101,6 +106,7 @@ def build_analysis_detail_response(analysis: Analysis) -> AnalysisDetailResponse
         created_at=analysis.created_at,
         repository=RepositoryResponse.model_validate(analysis.repository),
         metrics=metrics_obj,
+        dependency_scan=DependencyScanResponse.model_validate(scan.to_dict()) if scan else None,
     )
 
 
@@ -224,7 +230,7 @@ async def stream_analysis(
         "Runs the same analysis as `POST /api/v1/analyze` and streams its progress as "
         "newline-delimited JSON, one event per line, so a client can show each step as it "
         "happens: `validate`, `reuse` (a report from the last hour is reused), `fetch` (once per "
-        "finished GitHub call, six in all), `analyze`, `score` and `save`. The stream ends with "
+        "finished GitHub call, six in all), `dependencies`, `analyze`, `score` and `save`. The stream ends with "
         '`{"event": "done", "report_url": ...}` or `{"event": "error", "error_code": ...}`; '
         "errors after the stream starts use the same codes as the other endpoints. "
         "An invalid repository URL is rejected with a 400 before the stream starts. "

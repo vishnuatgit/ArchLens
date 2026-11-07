@@ -109,5 +109,8 @@ class Metric(Base):
         Text, nullable=True
     )  # e.g., ["Add a LICENSE file to define usage rules"]
 
+    # Dependency scan (see DependencyScan.to_dict). NULL: stored before scanning existed
+    dependencies_json = Column(Text, nullable=True)
+
     # Establish relationship
     analysis = relationship("Analysis", back_populates="metrics")

@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any, TypeVar
 
+import httpx
 from sqlalchemy.orm import Session
 
 from app.exceptions import (
@@ -19,6 +20,7 @@ from app.exceptions import (
     UpstreamServiceError,
 )
 from app.models.db_models import Analysis
+from app.services.dependency_service import DependencyScan, scan_dependencies
 from app.services.github_service import (
     GitHubAPIError,
     GitHubEmptyRepositoryError,
@@ -77,6 +79,7 @@ class AnalysisService:
         self,
         cache_ttl: timedelta | None = None,
         rate_limiter: SlidingWindowRateLimiter | None = None,
+        osv_client: httpx.AsyncClient | None = None,
     ) -> None:
         self.github = GitHubService()
         self.metrics = MetricsService()
@@ -84,6 +87,8 @@ class AnalysisService:
         # Both are optional so the CLI and scripts always run a fresh, unlimited analysis
         self.cache_ttl = cache_ttl
         self.rate_limiter = rate_limiter
+        # Tests pass a client with a fake transport; None means a real one per OSV check
+        self.osv_client = osv_client
 
     async def run(
         self,
@@ -103,7 +108,7 @@ class AnalysisService:
             client_id: Identifies the caller (e.g. IP address) for the rate limiter.
             progress: Optional callback that receives {"event": "progress", "step", "status",
                 ...details} as the analysis moves through its steps: validate, reuse (only when
-                a recent report is reused), fetch (once per finished GitHub call), analyze,
+                a recent report is reused), fetch (once per finished GitHub call), dependencies, analyze,
                 score and save.
 
         Returns:
@@ -224,6 +229,25 @@ class AnalysisService:
             detail = f"HTTP {e.status_code}" if e.status_code else "network error"
             raise UpstreamServiceError(detail) from e
 
+        # Step 3b: list the dependencies and check them against OSV.dev. This never fails
+        # the analysis: whatever cannot be read or checked is recorded in the scan instead
+        report("dependencies", "running")
+        try:
+            dependency_scan = await scan_dependencies(
+                self.github, owner, repo_name, root_contents, self.osv_client
+            )
+        except Exception:
+            logger.exception(f"Dependency scan crashed for {owner}/{repo_name}")
+            dependency_scan = DependencyScan(
+                status="error", notes=["The dependency scan failed unexpectedly."]
+            )
+        report(
+            "dependencies",
+            dependencies=len(dependency_scan.dependencies),
+            vulnerabilities=len(dependency_scan.vulnerabilities),
+            vulnerability_check=dependency_scan.vulnerability_check,
+        )
+
         # GitHub reports the canonical owner/name casing and follows renames
         requested_url = canonical_github_url(owner, repo_name)
         full_name = metadata.get("full_name") if isinstance(metadata, dict) else None
@@ -271,6 +295,7 @@ class AnalysisService:
                 recent_commits=recent_commits,
                 report=scored,
                 repo_type=repo_type,
+                dependency_scan=dependency_scan,
             )
         except Exception as e:
             logger.error(f"Failed to persist analysis for {owner}/{repo_name}: {e}")
@@ -292,6 +317,7 @@ class AnalysisService:
             "strengths": scored["strengths"],
             "weaknesses": scored["weaknesses"],
             "suggestions": scored["suggestions"],
+            "dependency_scan": dependency_scan.to_dict(),
             "reused": False,
         }
 
@@ -299,6 +325,7 @@ class AnalysisService:
     def _result_from_analysis(analysis: Analysis) -> dict:
         """Builds the run() result from a stored analysis that is being reused."""
         metrics = analysis.metrics
+        scan = DependencyScan.from_json(metrics.dependencies_json) if metrics else None
         return {
             "analysis_id": analysis.id,
             "status": "completed",
@@ -311,5 +338,6 @@ class AnalysisService:
             "strengths": json.loads(metrics.strengths_json or "[]") if metrics else [],
             "weaknesses": json.loads(metrics.weaknesses_json or "[]") if metrics else [],
             "suggestions": json.loads(metrics.suggestions_json or "[]") if metrics else [],
+            "dependency_scan": scan.to_dict() if scan else None,
             "reused": True,
         }

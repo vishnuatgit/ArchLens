@@ -101,3 +101,64 @@ def test_help_lists_the_analyze_command():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "analyze" in result.stdout
+
+
+def test_analyze_prints_dependencies_and_vulnerabilities_with_the_fix(mock_async_analyze):
+    mock_async_analyze.return_value = {
+        "owner": "test",
+        "name": "repo",
+        "repo_type": "library",
+        "score": 85,
+        "duration": 1.2,
+        "analysis_id": 1,
+        "breakdown": {},
+        "dependency_scan": {
+            "status": "ok",
+            "manifests": ["requirements.txt"],
+            "dependencies": [
+                {
+                    "name": "jinja2",
+                    "ecosystem": "PyPI",
+                    "spec": "==2.1",
+                    "version": "2.1",
+                    "source": "requirements.txt",
+                    "dev": False,
+                    "pinned": True,
+                }
+            ],
+            "vulnerability_check": "ok",
+            "vulnerabilities": [
+                {
+                    "id": "GHSA-aaaa",
+                    "package": "jinja2",
+                    "ecosystem": "PyPI",
+                    "version": "2.1",
+                    "severity": "high",
+                    "summary": "",
+                    "fixed": "2.11.3",
+                    "aliases": [],
+                    "url": "https://osv.dev/vulnerability/GHSA-aaaa",
+                }
+            ],
+            "checked": 1,
+            "notes": [],
+        },
+    }
+    result = runner.invoke(app, ["analyze", "test/repo"])
+    assert result.exit_code == 0
+    assert "1 direct dependencies (1 pinned)" in result.stdout
+    assert "GHSA-aaaa" in result.stdout and "upgrade to 2.11.3" in result.stdout
+    assert "0-100 score" in result.stdout
+
+
+def test_analyze_says_when_a_stored_report_was_never_scanned(mock_async_analyze):
+    mock_async_analyze.return_value = {
+        "owner": "t",
+        "name": "r",
+        "repo_type": "library",
+        "score": 50,
+        "duration": 1,
+        "analysis_id": 1,
+        "breakdown": {},
+    }
+    assert "not scanned" in runner.invoke(app, ["analyze", "t/r"]).stdout

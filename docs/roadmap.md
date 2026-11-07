@@ -1,29 +1,36 @@
 # ArchLens roadmap (November 2026)
 
-Goal: turn ArchLens from a one-shot repository scorer into a developer productivity tool that runs on every pull
-request, tracks a repository's health over time, checks dependencies for known vulnerabilities, and covers a whole
-organisation. Every feature ships as its own pull request with a walkthrough in `docs/walkthroughs/` (what it does,
-how it works, the design choices and their trade-offs, and the questions an interviewer is likely to ask).
+This page records what was decided, and why, so the reasoning is not lost.
 
-Constraints: free tiers only. SQLite and an in-memory cache stay the defaults, so the Render demo keeps working;
-PostgreSQL and Redis are used when `DATABASE_URL` / `REDIS_URL` are set (Docker Compose locally, Neon and Upstash
-free tiers online). AI suggestions run only when a model key is set, and fall back to the rule-based suggestions.
-Every number published in the README is measured, with the method stated.
+Constraints that shaped every decision: free tiers only; SQLite and an in-memory cache stay the defaults so the
+Render demo keeps working with no new services or required environment variables; every number published in the
+README is measured, with the method stated; every feature ships as its own pull request with a walkthrough in
+`docs/walkthroughs/`.
 
-## Order and why
+## Decision: build three features
 
-| # | Pull request | Builds on | Notes |
-|---|---|---|---|
-| 1 | Health history and trend charts | the `analyses` table (already one row per run) | Score and the seven dimensions over time for one repository; deltas between runs. Needed by the PR check (base vs head). |
-| 2 | Analyse a branch or commit (`ref`) | `github_service` | Contents, commits and workflows read at a given ref. Needed by PR checks. |
-| 3 | GitHub Actions integration | 2 | A reusable composite action (`action.yml`) that runs the ArchLens CLI on a repository and ref, writes a job summary and outputs the score. |
-| 4 | Pull request quality checks | 1, 3 | The action compares the PR head with its base, posts or updates one PR comment (score change, what got better or worse, the fixes), and fails below a threshold you set. |
-| 5 | Dependency graph analysis | contents API | Reads `requirements*.txt`, `pyproject.toml`, `package.json` and lockfiles, `go.mod`; direct dependencies with versions, pinned or not, per ecosystem; shown in the report and the API. |
-| 6 | Vulnerability scanning | 5 | Pinned versions checked against the OSV.dev batch API (free, no key); advisories with severity and links; unpinned dependencies listed as "can't check". A separate section, so past scores stay comparable. |
-| 7 | Organisation dashboard | 1, 5, 6 | Lists an organisation's public repositories and analyses the top N with streamed progress; one table with scores, grades, vulnerabilities and trends. Needs a GitHub token for more than a few repositories (rate limits). |
-| 8 | PostgreSQL and Redis | all | `DATABASE_URL` and `REDIS_URL`; Alembic migrations checked on PostgreSQL; Redis for the report cache and the rate limiter, in-memory fallback; `docker-compose.yml`; CI runs the tests on both databases. |
-| 9 | AI improvement suggestions with evidence | 5, 6 | A model proposes fixes from the findings and the files read; every suggestion must cite a file (and line where possible) that ArchLens actually fetched, and uncited ones are dropped. Off without a key. |
-| 10 | Integration and load tests | 8 | End-to-end tests against PostgreSQL and Redis in CI; a Locust load test with published p50/p95 latency and throughput for cached and uncached reports. |
+| # | Feature | Why it earns its place |
+|---|---|---|
+| 1 | **Dependency and vulnerability scanning** | The score says whether a repository is well kept; it says nothing about the libraries it ships. Reading the manifests and asking OSV.dev (free, no key) answers "is anything here known to be vulnerable, and what do I upgrade to?". It is the one signal people act on immediately. |
+| 2 | **GitHub Action health gate** | A score on a web page is read once. A composite Action puts it where the work happens: a job summary, outputs, a failing check below a threshold and one pull-request comment. It reuses the CLI, so it adds little code. |
+| 3 | **Measured performance and Postgres-ready CI** | Claims need evidence. A Locust load test gives real latency numbers for the pages visitors open, and a CI job that runs the suite on PostgreSQL proves `DATABASE_URL` is not SQLite-only, without making Postgres required. |
 
-Your version of the list put GitHub Actions first. The order above keeps it near the front but adds the two small
-pieces it depends on (history, and analysing a ref) first, so each PR works on its own.
+## Considered and not built
+
+| Idea | Decision | Reason |
+|---|---|---|
+| Health history and trend charts | Already exists | Every analysis is stored, the report page has a score history for the repository, and `/compare` lines two repositories up. Nothing left to build. |
+| Per-pull-request scoring | Folded into the Action | ArchLens scores repository metadata (files present, activity, community). A pull request barely changes that, so a per-PR score would be almost always the same number: low signal. The Action's optional PR comment shows the repository's current score and top fixes instead. |
+| Organisation dashboard | Deferred | Analysing many repositories at once needs many GitHub calls. The free demo has 60 requests an hour without a token, so it would hit the limit at once. Revisit if a token with a higher budget is available. |
+| AI improvement suggestions | Deferred | The rule-based fixes already say what to do and what it is worth in points. A model would add little on top, and its output is hard to evaluate honestly. Revisit when there is a way to measure whether suggestions are right. |
+| Redis (cache and rate limiter) | Dropped | The demo is one free instance, so the in-memory cache and rate limiter are enough. Redis would add a second service to run and pay for, with no benefit at that size. |
+
+## Order
+
+1. `feat/dependency-vulnerabilities`: manifests, OSV check, report, API, Markdown, CLI. The score formula is
+   unchanged so past scores stay comparable.
+2. `feat/github-action`: the composite Action and a workflow that runs it on ArchLens itself.
+3. `feat/perf-and-postgres`: load test with published numbers; PostgreSQL in CI and Docker Compose.
+
+Each branch builds on the one before it, so the Action can report the vulnerability count and the load test covers
+the final pages.

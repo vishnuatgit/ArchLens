@@ -45,6 +45,48 @@ class MetricApiResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DependencyResponse(BaseModel):
+    """One direct dependency read from a manifest."""
+
+    name: str
+    ecosystem: str = Field(description="PyPI, npm or Go")
+    spec: str = Field(description="The version constraint as written in the manifest")
+    version: str | None = Field(description="The exact version, or null when it is not pinned")
+    pinned: bool
+    source: str = Field(description="The manifest the dependency came from")
+    dev: bool = False
+
+
+class VulnerabilityResponse(BaseModel):
+    """A known advisory for a pinned dependency (from OSV.dev)."""
+
+    id: str
+    url: str
+    package: str
+    ecosystem: str
+    version: str
+    severity: str = Field(description="critical, high, medium, low or unknown")
+    summary: str = ""
+    fixed: str | None = Field(None, description="Upgrade to this version or later, when known")
+    aliases: list[str] = Field(default_factory=list)
+
+
+class DependencyScanResponse(BaseModel):
+    """
+    Dependencies and known vulnerabilities. Informational: they do not change the score.
+    `status` is ok, none (no supported manifest in the repository root) or error.
+    `vulnerability_check` is ok, unavailable (OSV could not be reached) or skipped.
+    """
+
+    status: str
+    manifests: list[str] = Field(default_factory=list)
+    dependencies: list[DependencyResponse] = Field(default_factory=list)
+    vulnerability_check: str
+    vulnerabilities: list[VulnerabilityResponse] = Field(default_factory=list)
+    checked: int = 0
+    notes: list[str] = Field(default_factory=list)
+
+
 class AnalysisDetailResponse(BaseModel):
     """Complete analysis response schema."""
 
@@ -58,6 +100,9 @@ class AnalysisDetailResponse(BaseModel):
     created_at: datetime
     repository: RepositoryResponse
     metrics: MetricApiResponse | None = None
+    dependency_scan: DependencyScanResponse | None = Field(
+        None, description="null for reports stored before dependency scanning existed"
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

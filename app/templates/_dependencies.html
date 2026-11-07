@@ -1,0 +1,100 @@
+{#- The Dependencies and Known vulnerabilities cards of a report. Informational: neither changes the score. -#}
+{% import "_ui.html" as ui %}
+{% set scan = report.dependency_scan %}
+
+{% macro vuln_item(vuln) %}
+        <li class="vuln">
+            <span class="sev sev-{{ vuln.severity }}">{{ vuln.severity }}</span>
+            <div class="vuln-body">
+                <div class="vuln-head">
+                    <a href="{{ vuln.url }}" target="_blank" rel="noopener noreferrer" class="vuln-id mono">{{ vuln.id }}<span class="visually-hidden"> (opens OSV.dev in a new tab)</span></a>
+                    <span class="vuln-pkg mono">{{ vuln.package }} {{ vuln.version }}</span>
+                    {% for alias in vuln.aliases if alias.startswith("CVE-") %}<span class="muted small mono">{{ alias }}</span>{% endfor %}
+                </div>
+                {% if vuln.summary %}<p class="vuln-summary">{{ vuln.summary }}</p>{% endif %}
+                <p class="vuln-fix{{ ' vuln-fix-yes' if vuln.fixed }}">{{ ui.icon("arrow-right") }}{{ vuln.advice }}</p>
+            </div>
+        </li>
+{% endmacro %}
+
+
+<section class="card dep-card" aria-labelledby="deps-title">
+    <div class="card-header">
+        <div class="card-title-wrap">
+            <span class="card-icon">{{ ui.icon("layers") }}</span>
+            <h2 id="deps-title" class="card-title">Dependencies</h2>
+            {% if scan and scan.status == "ok" %}<span class="count-pill">{{ scan.dependencies|length }}</span>{% endif %}
+        </div>
+        <span class="card-subtitle">Direct dependencies from the repository root</span>
+    </div>
+
+    {% if scan is none %}
+    <p class="dim-note">{{ ui.icon("info") }}Not scanned: this report was stored before dependency scanning existed. Analyze the repository again to scan it.</p>
+    {% elif scan.status == "none" %}
+    <p class="dim-note">{{ ui.icon("info") }}No supported dependency file in the repository root. ArchLens reads <code>requirements*.txt</code>, <code>pyproject.toml</code>, <code>package.json</code> (with <code>package-lock.json</code>) and <code>go.mod</code>.</p>
+    {% elif scan.status == "error" %}
+    <p class="dim-note">{{ ui.icon("alert") }}{{ scan.notes[0] if scan.notes else "The dependency files could not be read." }} Analyze again later.</p>
+    {% else %}
+    <p class="dep-summary muted small">
+        Read from {% for name in scan.manifests %}<code>{{ name }}</code>{{ ", " if not loop.last }}{% endfor %}:
+        <span class="mono">{{ scan.pinned_count }}</span> pinned to an exact version, <span class="mono">{{ scan.unpinned_count }}</span> not pinned.
+        Only pinned versions can be checked for vulnerabilities.
+    </p>
+    {% for ecosystem, members in scan.by_ecosystem() %}
+    <details class="dep-group"{% if members|length <= 12 %} open{% endif %}>
+        <summary class="dep-group-head"><span>{{ ecosystem }}</span><span class="count-pill">{{ members|length }}</span>{{ ui.icon("chevron-down", "icon dim-chevron") }}</summary>
+        <div class="table-wrap">
+            <table class="table dep-table">
+                <thead><tr><th scope="col">Package</th><th scope="col">Declared</th><th scope="col">Version</th><th scope="col">Status</th></tr></thead>
+                <tbody>
+                    {% for dep in members %}
+                    <tr>
+                        <th scope="row" class="dep-name">{{ dep.name }}{% if dep.dev %} <span class="tag">dev</span>{% endif %}</th>
+                        <td class="mono dep-spec">{{ dep.spec or "any" }}</td>
+                        <td class="mono">{{ dep.version or "–" }}</td>
+                        <td>{% if dep.pinned %}<span class="dep-pin dep-pin-yes">pinned</span>{% else %}<span class="dep-pin">not pinned</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    {% endfor %}
+    {% if not scan.dependencies %}<p class="dim-note">{{ ui.icon("info") }}The dependency files declare no dependencies.</p>{% endif %}
+    {% for note in scan.notes %}<p class="dim-note">{{ ui.icon("info") }}{{ note }}</p>{% endfor %}
+    {% endif %}
+</section>
+
+{% if scan and scan.status == "ok" %}
+<section class="card vuln-card" aria-labelledby="vulns-title">
+    <div class="card-header">
+        <div class="card-title-wrap">
+            <span class="card-icon {{ 'card-icon-good' if scan.vulnerability_check == 'ok' and not scan.vulnerabilities else 'card-icon-warn' }}">{{ ui.icon("shield") }}</span>
+            <h2 id="vulns-title" class="card-title">Known vulnerabilities</h2>
+            {% if scan.vulnerability_check == "ok" %}<span class="count-pill">{{ scan.vulnerabilities|length }}</span>{% endif %}
+        </div>
+        <span class="card-subtitle">From OSV.dev, for pinned versions</span>
+    </div>
+
+    {% if scan.vulnerability_check == "unavailable" %}
+    <p class="dim-note">{{ ui.icon("alert") }}Couldn&rsquo;t check: OSV.dev did not answer in time. The dependencies above are still listed. Analyze again later to retry.</p>
+    {% elif scan.vulnerability_check == "skipped" %}
+    <p class="dim-note">{{ ui.icon("info") }}Nothing to check: no dependency has an exact version. Pin versions (<code>==</code> in requirements, a lockfile for npm) to get a vulnerability check.</p>
+    {% elif not scan.vulnerabilities %}
+    <p class="dim-note dep-clear">{{ ui.icon("check-circle") }}No known vulnerabilities in the {{ scan.checked }} pinned {{ "dependency" if scan.checked == 1 else "dependencies" }} checked.</p>
+    {% else %}
+    <ul class="vuln-list">
+        {% for vuln in scan.vulnerabilities[:10] %}{{ vuln_item(vuln) }}{% endfor %}
+    </ul>
+    {% if scan.vulnerabilities|length > 10 %}
+    <details class="vuln-more">
+        <summary class="btn btn-sm btn-ghost">Show {{ scan.vulnerabilities|length - 10 }} more</summary>
+        <ul class="vuln-list">
+            {% for vuln in scan.vulnerabilities[10:] %}{{ vuln_item(vuln) }}{% endfor %}
+        </ul>
+    </details>
+    {% endif %}
+    {% endif %}
+    <p class="dim-note">{{ ui.icon("info") }}Informational only: dependencies and vulnerabilities do not change the 0&ndash;100 score, so reports stay comparable with earlier ones.</p>
+</section>
+{% endif %}

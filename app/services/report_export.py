@@ -4,6 +4,7 @@ Exports a report as Markdown, for pasting into an issue, a pull request or notes
 
 from app.config import SITE
 from app.formatting import format_size_kb
+from app.services.dependency_service import SCORE_NOTE, DependencyScan
 from app.services.evidence import build_evidence, build_fix_plan
 from app.services.report_view import ReportView
 
@@ -24,6 +25,47 @@ def _fix_lines(report: ReportView) -> list[str]:
             f"The file-level fixes add {plan.exact_gain} points: {report.score} → "
             f"{plan.projected_score} ({plan.projected_grade}).",
         ]
+    return lines
+
+
+def _dependency_lines(scan: DependencyScan | None) -> list[str]:
+    """The "Dependencies" and "Known vulnerabilities" sections, with the same wording as the page."""
+    if scan is None:
+        return [
+            "## Dependencies",
+            "",
+            "Not scanned: this report was stored before dependency scanning existed.",
+            "",
+        ]
+    lines = ["## Dependencies", "", scan.summary_line, ""]
+    for ecosystem, members in scan.by_ecosystem():
+        lines += [
+            f"**{ecosystem}**",
+            "",
+            "| Package | Declared | Version | Status |",
+            "| :-- | :-- | :-- | :-- |",
+        ]
+        for d in members:
+            status = "pinned" if d.pinned else "not pinned"
+            name = f"{d.name} (dev)" if d.dev else d.name
+            lines.append(f"| {name} | `{d.spec or 'any'}` | {d.version or '-'} | {status} |")
+        lines.append("")
+    lines += [f"_{note}_" for note in scan.notes]
+    lines += ["## Known vulnerabilities", ""]
+    if scan.vulnerability_check == "ok" and scan.vulnerabilities:
+        lines += ["| Severity | Package | Advisory | Fix |", "| :-- | :-- | :-- | :-- |"]
+        lines += [
+            f"| {v.severity} | {v.package} {v.version} | [{v.id}]({v.url}) | "
+            f"{'upgrade to ' + v.fixed if v.fixed else 'no fixed version listed'} |"
+            for v in scan.vulnerabilities
+        ]
+    elif scan.vulnerability_check == "ok":
+        lines.append(f"None found in {scan.checked} checked pinned dependencies (OSV.dev).")
+    elif scan.vulnerability_check == "unavailable":
+        lines.append("Could not check: OSV.dev did not answer. Analyze again later.")
+    else:
+        lines.append("Not checked: no dependency has an exact version.")
+    lines += ["", f"_{SCORE_NOTE}_", ""]
     return lines
 
 
@@ -72,6 +114,8 @@ def report_to_markdown(report: ReportView, report_url: str | None = None) -> str
         lines += ["## Strengths", ""]
         lines += [f"- {item}" for item in report.strengths]
         lines.append("")
+
+    lines += _dependency_lines(report.dependency_scan)
 
     lines += [
         "## Repository facts",
