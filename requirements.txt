@@ -1,14 +1,15 @@
-# Runtime dependencies (installed in the Docker image).
+# Runtime dependencies (installed in the Docker image), pinned to exact versions so every build
+# installs the same code and ArchLens can check them against OSV.dev like any other repository.
 # Development and CI tools live in requirements-dev.txt.
-fastapi>=0.118.0,<1
-uvicorn>=0.30.1,<1
-pydantic>=2.7.4,<3
-pydantic-settings>=2.3.3,<3
-sqlalchemy>=2.0.31,<3
-jinja2>=3.1.4,<4
-httpx>=0.27.0,<1
-python-dotenv>=1.0.1,<2
-python-multipart>=0.0.9
-alembic>=1.13.1,<2
-typer>=0.12.3
-rich>=13.7.1
+fastapi==0.138.1
+uvicorn==0.49.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
+sqlalchemy==2.0.51
+jinja2==3.1.6
+httpx==0.28.1
+python-dotenv==1.2.2
+python-multipart==0.0.32
+alembic==1.18.5
+typer==0.27.0
+rich==15.0.0
