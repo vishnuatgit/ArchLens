@@ -27,6 +27,8 @@ README is measured, with the method stated; every feature ships as its own pull 
 
 ## Order
 
+Status: all three features are built and merged (pull requests 8 to 10).
+
 1. `feat/dependency-vulnerabilities`: manifests, OSV check, report, API, Markdown, CLI. The score formula is
    unchanged so past scores stay comparable.
 2. `feat/github-action`: the composite Action and a workflow that runs it on ArchLens itself.

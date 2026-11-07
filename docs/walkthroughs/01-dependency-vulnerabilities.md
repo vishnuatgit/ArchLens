@@ -25,7 +25,7 @@ analysis starts
   -> six GitHub calls (one is the root file listing)
   -> scan_dependencies()                         app/services/dependency_service.py
        select_manifests(root listing)            which files exist? (no extra request)
-       fetch_file_text() x 1..6                  app/services/github_service.py, raw file text
+       fetch_file_text() x 1..7                  app/services/github_service.py, raw file text
        parse_manifests()                         one pure parser per file type
        check_vulnerabilities()                   OSV: one batch request + one request per advisory
   -> DependencyScan stored as JSON               metrics.dependencies_json (Alembic migration a1c5e8f20b64)
@@ -64,7 +64,7 @@ Details worth knowing:
 
 | Choice | Why | Cost |
 |---|---|---|
-| Root files only | Keeps GitHub requests to 1-6 per analysis (the demo has 60 an hour unauthenticated) | Monorepos with manifests in sub-folders show fewer dependencies |
+| Root files only | Keeps GitHub requests to 1-7 extra per analysis (the demo has 60 an hour unauthenticated) | Monorepos with manifests in sub-folders show fewer dependencies |
 | Direct dependencies only | Transitive ones need a resolver or a lockfile parser per ecosystem; direct ones are what the owner controls | Vulnerabilities in transitive packages are not found (except npm resolved versions are used for the direct ones) |
 | Only pinned versions are checked | Without an exact version "is it vulnerable?" has no honest answer | Loose requirements are listed as "not pinned" instead of checked |
 | Hand-written parsers | A few dozen lines each, easy to explain and test, no new dependencies | Exotic syntax (Poetry tables, `requirements` includes) is not read |
@@ -75,7 +75,8 @@ Details worth knowing:
 
 ## Limits
 
-- Root directory only; at most six files; at most 200 pinned dependencies sent to OSV; at most 40 advisory
+- Root directory only; at most seven files (three `requirements*.txt`, `pyproject.toml`, `package.json`,
+  `package-lock.json`, `go.mod`); at most 200 pinned dependencies sent to OSV; at most 40 advisory
   look-ups (advisories beyond that are listed by id with severity "unknown").
 - Python: `requirements*.txt` and `[project] dependencies` in `pyproject.toml`. Not Poetry, Pipenv, `setup.py`
   or optional dependency groups. Version comparison for "fixed in" is numeric, not full PEP 440.
