@@ -10,7 +10,8 @@ services:
     region: singapore
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    autoDeploy: true
+    # Deploy every commit to main once its GitHub checks (CI) pass.
+    autoDeployTrigger: checksPass
     envVars:
       # Fine-grained GitHub token with no repository permissions (public data only).
       # Set the value in the Render dashboard; it is never committed.
