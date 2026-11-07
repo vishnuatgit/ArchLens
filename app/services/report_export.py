@@ -51,6 +51,9 @@ def _dependency_lines(scan: DependencyScan | None) -> list[str]:
             lines.append(f"| {name} | `{d.spec or 'any'}` | {d.version or '-'} | {status} |")
         lines.append("")
     lines += [f"_{note}_" for note in scan.notes]
+    if scan.status != "ok":
+        # Like the page: no vulnerability section when there is no dependency file to read.
+        return lines + [f"_{SCORE_NOTE}_", ""]
     lines += ["## Known vulnerabilities", ""]
     if scan.vulnerability_check == "ok" and scan.vulnerabilities:
         lines += ["| Severity | Package | Advisory | Fix |", "| :-- | :-- | :-- | :-- |"]

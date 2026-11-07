@@ -79,7 +79,7 @@
             <div class="arch-row">
                 <div class="arch-box arch-core">
                     <span class="arch-name mono">AnalysisService</span>
-                    <span class="arch-note">validate input &rarr; reuse a recent report &rarr; rate-limit &rarr; fetch &rarr; score &rarr; store, reporting each step</span>
+                    <span class="arch-note">validate input &rarr; reuse a recent report &rarr; rate-limit &rarr; fetch &rarr; scan dependencies &rarr; score &rarr; store, reporting each step</span>
                 </div>
             </div>
             <div class="arch-arrow" aria-hidden="true"></div>
@@ -115,7 +115,8 @@
                 <tr><th scope="row">Language</th><td>Python 3.11+</td></tr>
                 <tr><th scope="row">Web framework</th><td>FastAPI (async), server-rendered Jinja2 templates</td></tr>
                 <tr><th scope="row">GitHub client</th><td>httpx <code>AsyncClient</code>, calls run concurrently with <code>asyncio.gather</code></td></tr>
-                <tr><th scope="row">Storage</th><td>SQLite through SQLAlchemy 2, schema migrations with Alembic</td></tr>
+                <tr><th scope="row">Storage</th><td>SQLite by default (PostgreSQL optional) through SQLAlchemy 2, schema migrations with Alembic</td></tr>
+                <tr><th scope="row">Vulnerability data</th><td>OSV.dev (free, no key); if it cannot be reached the report says &ldquo;couldn&rsquo;t check&rdquo;</td></tr>
                 <tr><th scope="row">Command line</th><td>Typer and Rich</td></tr>
                 <tr><th scope="row">Front end</th><td>Plain CSS, inline SVG charts and one vanilla JavaScript file; no build step</td></tr>
                 <tr><th scope="row">Quality</th><td>pytest with GitHub mocked, Ruff, Black, GitHub Actions</td></tr>
@@ -184,13 +185,13 @@
     <section class="card about-section" aria-labelledby="limits-title">
         <h2 id="limits-title" class="about-title">Limitations</h2>
         <ul class="plain-list limits">
-            <li><strong>Metadata only.</strong> ArchLens reads repository statistics and the root file listing. It does not read source files, run tests or measure coverage.</li>
+            <li><strong>Metadata and dependency files only.</strong> ArchLens reads repository statistics, the root file listing and the dependency files in the root. It does not read source files, run tests or measure coverage.</li>
             <li><strong>Heuristics, not ground truth.</strong> A file earns points by existing, whatever its quality, and stars are a weak proxy for health. Read a low score as a list of things to look at.</li>
             <li><strong>Capped counts.</strong> Contributors and recent commits come from one page of GitHub results, so they stop at {{ api_page_cap }}.</li>
             <li><strong>Single instance.</strong> The rate limiter lives in memory, resets on restart and trusts the <code>X-Forwarded-For</code> header, which a determined client can forge.</li>
             <li><strong>Renames are learned, not looked up.</strong> An old name of a renamed repository finds the new one&rsquo;s reports only after someone has analyzed it under the old name once.</li>
             <li><strong>Ephemeral demo storage.</strong> On the free host the SQLite file resets when the service restarts. Example reports come back; other reports, and the badges that point at them, return after someone analyzes the repository again.</li>
-            <li><strong>GitHub limits.</strong> Without a token GitHub allows 60 requests an hour, about ten analyses.</li>
+            <li><strong>GitHub limits.</strong> Without a token GitHub allows 60 requests an hour, which is five to ten analyses (each uses six requests, plus one for each dependency file it finds).</li>
         </ul>
     </section>
 

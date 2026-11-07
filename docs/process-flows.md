@@ -24,6 +24,7 @@ Every journey a visitor can take through ArchLens, and every flow the backend ru
 15. [Startup, storage and example reports](#15-startup-storage-and-example-reports)
 16. [Errors: one vocabulary, three surfaces](#16-errors-one-vocabulary-three-surfaces)
 17. [Renamed and transferred repositories](#17-renamed-and-transferred-repositories)
+18. [Dependencies and known vulnerabilities](#18-dependencies-and-known-vulnerabilities)
 
 ---
 
@@ -60,6 +61,8 @@ sequenceDiagram
             GH-->>S: each call
             S-->>JS: fetch k of 6 (one event per finished call)
         end
+        S->>GH: dependency files in the root, then OSV.dev (flow 18)
+        S-->>JS: dependencies (counts)
         S-->>JS: analyze, score (score, grade)
         S->>DB: store repository, analysis, metrics (and the old name of a renamed repo)
         S-->>JS: save (analysis_id, suggestions)
@@ -76,7 +79,7 @@ sequenceDiagram
 2. The button switches to "Analyzing…" with a spinner (`setBusy`), the pipeline is reset and marked running, and on phones it is scrolled into view.
 3. `fetch()` posts JSON to `POST /api/v1/analyze/stream` (`analyze_repository_stream` in `app/routers/api.py`). The response is newline-delimited JSON, read with a `ReadableStream` reader in `readStream()`.
 4. Each event goes through a small queue (`enqueue`/`drain`). Events are real; the queue only spaces them by 70 to 170 ms so a fast analysis is still visible (no pause under `prefers-reduced-motion`).
-5. `handle()` maps events to the four steps: `fetch` (with six ticks, one per GitHub call: `metadata`, `languages`, `contributors`, `root_files`, `commits`, `workflows`), `analyze` ("Check 7 dimensions"), `score` ("Score and grade") and `save` ("Suggest next steps"). The active step has a spinning ring; finished steps get a check. The status line (`#pipeline-status`, `aria-live="polite"`) narrates each step.
+5. `handle()` maps events to the four steps (the `dependencies` event has no step of its own; the page ignores it): `fetch` (with six ticks, one per GitHub call: `metadata`, `languages`, `contributors`, `root_files`, `commits`, `workflows`), `analyze` ("Check 7 dimensions"), `score` ("Score and grade") and `save` ("Suggest next steps"). The active step has a spinning ring; finished steps get a check. The status line (`#pipeline-status`, `aria-live="polite"`) narrates each step.
 6. If no GitHub call has finished after 4 seconds (`watchForSlowGitHub()`), the fetch step says "Waiting for GitHub…" and the status line "GitHub is slow to answer. Still trying…" (the client retries 5xx answers and timeouts, flow 11).
 7. On `done`, the page navigates to `report_url` (`/analysis/{id}`).
 
@@ -149,6 +152,8 @@ flowchart TD
 9. README badge: preview and Markdown, HTML and image-URL snippets in tabs, each with Copy. The badge URL carries the report's profile (`?profile=library`).
 10. Score history: every stored report of the repository (date, profile and Example tags, score bar, grade, score), shown only when there is more than one. Rows without a stored grade show the grade their score maps to (`grade_for`), never a made-up one.
 
+The **Dependencies** and **Known vulnerabilities** cards (flow 18) follow the findings; they are informational and do not change the score.
+
 **Empty and edge states:** "Nothing to fix" when every applicable check passed; "No summary was stored"; "GitHub reported no languages"; a note on dimensions stored without check-level detail.
 
 ---
@@ -167,7 +172,7 @@ flowchart LR
 ```
 
 * **Copy link / Copy as Markdown / Copy checklist / badge snippets:** buttons with `data-copy-text` or `data-copy-from` in `site.js`. They use the Clipboard API and fall back to a hidden textarea on plain-HTTP hosts. Success and failure appear as a toast in `#toasts` (`role="status"`, read by screen readers).
-* **Markdown export:** `report_to_markdown()` in `app/services/report_export.py` writes the score, grade, tier, profile, dimension table, the fix plan with points (or the stored suggestions), concerns, strengths and repository facts. The download sets `Content-Disposition` with `markdown_filename()`, for example `archlens-psf-requests-2026-10-31.md`.
+* **Markdown export:** `report_to_markdown()` in `app/services/report_export.py` writes the score, grade, tier, profile, dimension table, the fix plan with points (or the stored suggestions), concerns, strengths, repository facts and the dependency and vulnerability sections. The download sets `Content-Disposition` with `markdown_filename()`, for example `archlens-psf-requests-2026-10-31.md`.
 * **Permalink:** `latest_report()` in `app/routers/web.py` redirects `/repo/{owner}/{repo}` (case-insensitive, following recorded renames, flow 17) to the newest stored report with a 303. Report IDs change when the demo database resets; this address does not. With no report, it returns a 404 page whose **Analyze owner/repo** button starts the live analysis on the home page.
 
 ---
@@ -240,7 +245,7 @@ flowchart LR
 * `POST /api/v1/analyze` returns the full report as JSON: `201` for a new analysis, `200` when a report from the last hour is reused (`analyze_repository()` in `app/routers/api.py`).
 * `POST /api/v1/analyze/stream` is flow 10.
 * `GET /api/v1/analyses` (paginated, `repo_type` and `min_score` filters), `GET /api/v1/analyses/{id}`, `GET /api/v1/analyses/{id}/markdown` and `GET /api/v1/health`. Endpoints are tagged Analyses, Reports, Badges and System in `/docs`; HTML pages are left out of the schema.
-* The CLI (`app/cli.py`, installed as `archlens` by `pip install -e .`) runs `AnalysisService` directly against the local database with no reuse window and no visitor limit, and prints the report with Rich: `archlens analyze psf/requests`, or `archlens analyze <url> --profile personal`. An `@app.callback()` keeps `analyze` a named subcommand (Typer would otherwise fold a single command into the app). Errors print a message and exit with code 1.
+* The CLI (`app/cli.py`, installed as `archlens` by `pip install -e .`) runs `AnalysisService` directly against the local database with no reuse window and no visitor limit, and prints the report with Rich: `archlens analyze psf/requests`, or `archlens analyze <url> --profile personal`. `--format markdown|json` prints only the report on stdout (messages go to stderr), `--output-dir` also writes `report.md`, `result.json` and `comment.md` (what the GitHub Action publishes) and `--min-score N` exits with code 2 when the score is lower. An `@app.callback()` keeps `analyze` a named subcommand (Typer would otherwise fold a single command into the app). Errors print a message and exit with code 1.
 
 ---
 
@@ -261,7 +266,8 @@ flowchart TD
     L -- over limit --> X3["TooManyAnalysesError 429"]
     L --> G["gather_or_cancel() of six GitHub calls<br/>progress: fetch per finished call"]
     G -- "first failure cancels the rest" --> X4["404 to RepositoryNotFoundError<br/>409 to EmptyRepositoryError<br/>403/429 to RateLimitExceededError (limit refunded)<br/>other to UpstreamServiceError (limit refunded)"]
-    G --> N["Canonical owner/name from full_name<br/>(follows renames)"]
+    G --> DS["scan_dependencies() (flow 18)<br/>progress: dependencies; never fails the run"]
+    DS --> N["Canonical owner/name from full_name<br/>(follows renames)"]
     N --> M["MetricsService.calculate_overall_report()<br/>progress: analyze, score"]
     M --> D["get_or_create_repository()<br/>record_rename()<br/>save_analysis()"]
     D -- DB error --> X5["PersistenceError 500"]
@@ -270,11 +276,11 @@ flowchart TD
 
 **Inputs:** a URL or `owner/repo`, a profile (`library`, `personal`, `enterprise`), a client id (the first `X-Forwarded-For` address or the socket address, from `get_client_ip()` in `app/dependencies.py`), and an optional progress callback.
 
-**Outputs:** a dict with `analysis_id`, `score`, `breakdown`, findings and `reused`. Stored rows: `repositories` (one per canonical URL `https://github.com/{owner}/{repo}`), `analyses` (score, duration, profile, `is_example`, time) and `metrics` (raw counts, last push, grade, summary, and JSON columns for languages as percentages, the breakdown, strengths, weaknesses and suggestions).
+**Outputs:** a dict with `analysis_id`, `score`, `breakdown`, findings, `dependency_scan` and `reused`. Stored rows: `repositories` (one per canonical URL `https://github.com/{owner}/{repo}`), `analyses` (score, duration, profile, `is_example`, time) and `metrics` (raw counts, last push, grade, summary, and JSON columns for languages as percentages, the breakdown, strengths, weaknesses, suggestions and the dependency scan).
 
 **Concurrency:** `gather_or_cancel()` wraps each call in a task and awaits them with `asyncio.gather`; if one raises (a 404 on the metadata call, say), the calls still running are cancelled instead of spending more GitHub quota, and the error is mapped as shown. `tests/unit/test_analysis_service.py` checks that a slow call is cancelled.
 
-**Progress events** (`report()` inside `run`): `validate`, `reuse`, `fetch` (once before the calls with `completed: 0`, then once per finished call with its name; the sixth is `status: done`), `analyze` (running, then done with the number of findings), `score` (score and grade) and `save` (analysis id and number of suggestions). Results are written only after scoring, so a failure or cancellation never leaves half a report.
+**Progress events** (`report()` inside `run`): `validate`, `reuse`, `fetch` (once before the calls with `completed: 0`, then once per finished call with its name; the sixth is `status: done`), `dependencies` (running, then the counts of dependencies and vulnerabilities and the check's outcome), `analyze` (running, then done with the number of findings), `score` (score and grade) and `save` (analysis id and number of suggestions). Results are written only after scoring, so a failure or cancellation never leaves half a report.
 
 ---
 
@@ -403,7 +409,7 @@ flowchart TD
     Load -- error --> Warn["log a warning, start anyway"]
 ```
 
-* Schema changes are Alembic migrations in `alembic/versions/` (five: the initial schema, the profile column, scores and summary, the example flag, and repository aliases). The demo host's disk is ephemeral, so the bundled examples (real analyses captured by `scripts/build_examples.py`) refill an empty database; pages label them "Example" with their capture date.
+* Schema changes are Alembic migrations in `alembic/versions/` (six: the initial schema, the profile column, scores and summary, the example flag, repository aliases and the dependency scan column). The demo host's disk is ephemeral, so the bundled examples (real analyses captured by `scripts/build_examples.py`) refill an empty database; pages label them "Example" with their capture date.
 * `LoggingMiddleware` logs every request with its duration and adds `X-Process-Time`.
 
 ---
@@ -464,7 +470,7 @@ Part of `AnalysisService.run()`, after the six GitHub calls and before scoring (
 ```mermaid
 flowchart TD
     R["Root file listing<br/>(already fetched)"] --> M["select_manifests()<br/>requirements*.txt, pyproject.toml,<br/>package.json + lockfile, go.mod"]
-    M --> G["1 to 6 GitHub requests<br/>(raw file text)"]
+    M --> G["1 to 7 GitHub requests<br/>(raw file text)"]
     G --> P["Parsers: dependency, version, pinned?"]
     P --> O["OSV.dev: one batch request,<br/>then one request per advisory"]
     O --> D[("metrics.dependencies_json")]

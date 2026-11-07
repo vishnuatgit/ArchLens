@@ -78,7 +78,7 @@ Details worth knowing:
 - The score is about repository metadata, not about the code in the pull request.
 - Fork pull requests cannot post the comment.
 - Uses `@main` of this repository unless you pin a tag or commit; pin one for reproducible builds.
-- GitHub API quota: one analysis costs 7 to 12 requests; the workflow token allows 1,000 per hour per repository.
+- GitHub API quota: one analysis costs 6 to 13 requests; the workflow token allows 1,000 per hour per repository.
 
 ## Likely interview questions
 

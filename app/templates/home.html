@@ -271,8 +271,11 @@
         </div>
         <p class="text-2">
             ArchLens reads public metadata through the GitHub REST API. It <strong>never</strong> clones the
-            repository or downloads source files, and it stores only the resulting scores and findings.
-            These are the six requests an analysis makes, all at once:
+            repository or downloads source files, and it stores only the resulting scores, findings and
+            dependency list. These are the six requests an analysis makes, all at once. Afterwards it also
+            downloads the dependency files in the repository root (<code>requirements*.txt</code>,
+            <code>pyproject.toml</code>, <code>package.json</code>, <code>go.mod</code>), if there are any,
+            and asks OSV.dev about the pinned versions:
         </p>
         {# <wbr> after each slash lets a long path wrap at a slash on phones #}
         <ul class="request-list mono">

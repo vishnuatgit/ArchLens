@@ -2,7 +2,7 @@
 
 **Scores any public GitHub repo's engineering health out of 100 and says what to fix first.**
 
-A FastAPI web app, REST API and CLI. It reads a repository's metadata through the GitHub REST API (it never clones code), scores it across seven dimensions, explains every point, and stores every new analysis in SQLite so reports can be revisited, compared and shared.
+A FastAPI web app, REST API and CLI. It reads a repository's metadata and dependency files through the GitHub REST API (it never clones code), scores it across seven dimensions, explains every point, and stores every new analysis in SQLite so reports can be revisited, compared and shared.
 
 [![CI](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnuatgit/ArchLens/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
@@ -29,7 +29,7 @@ It is built to run on a free host such as Render's free tier, where the first vi
 - **Live progress.** The home page's "How it works" steps (fetch, check 7 dimensions, score, suggest) light up as the analysis runs, driven by real events streamed from the server as each of the six GitHub calls finishes. A reused report is marked as reused rather than re-run, a failed step says why ("Repository not found", "GitHub did not answer"), and a slow GitHub is announced. A report's "Analyze again" runs through the same live steps.
 - **Evidence for every point.** Each dimension opens to show its checks: passed, partial, missing, given or not scored, with what the scorer found (for example "Found 8 GitHub Actions workflow(s).") and the points earned.
 - **What to fix first, with points.** Every missing check becomes a fix with the points it would add (`+4` for adding a file, "up to +6" for things like commit activity), exact fixes first, and the score and grade they would lead to. Copy it as a Markdown checklist.
-- **Dependencies and known vulnerabilities.** The report lists the repository's direct dependencies per ecosystem (Python from `requirements*.txt` and `pyproject.toml`, npm from `package.json` with `package-lock.json`, Go from `go.mod`), says which are pinned to an exact version, and checks the pinned ones against [OSV.dev](https://osv.dev) (free, no key). Each vulnerability shows its severity, advisory link and the version to upgrade to. If OSV is down the report says "couldn't check" and the analysis still succeeds. This is shown in the report page, the JSON API (`dependency_scan`), the Markdown export and the CLI, and it does **not** change the 0-100 score, so older scores stay comparable. Only the repository root is read (no sub-folders), at most six files, so it costs one to six extra GitHub requests.
+- **Dependencies and known vulnerabilities.** The report lists the repository's direct dependencies per ecosystem (Python from `requirements*.txt` and `pyproject.toml`, npm from `package.json` with `package-lock.json`, Go from `go.mod`), says which are pinned to an exact version, and checks the pinned ones against [OSV.dev](https://osv.dev) (free, no key). Each vulnerability shows its severity, advisory link and the version to upgrade to. If OSV is down the report says "couldn't check" and the analysis still succeeds. This is shown in the report page, the JSON API (`dependency_scan`), the Markdown export and the CLI, and it does **not** change the 0-100 score, so older scores stay comparable. Only the repository root is read (no sub-folders), at most seven files (three `requirements*.txt`, `pyproject.toml`, `package.json`, `package-lock.json`, `go.mod`), so it costs up to seven extra GitHub requests.
 - **Charts from real data.** A score gauge, a radar chart of the dimension profile, dimension bars, a language bar in GitHub's language colours, and a score history when a repository has been analyzed more than once.
 - **Compare two repositories** side by side at `/compare?a=owner/repo&b=owner/repo`: overlaid radar charts, a dimension table with differences, and each one's top fixes. Stored reports are reused, so comparing known repositories costs no GitHub requests.
 - **Share.** Copy a link, use the stable `/repo/{owner}/{repo}` permalink, export Markdown (copy, download or `GET /api/v1/analyses/{id}/markdown`), or add a README badge (`/badge/{owner}/{repo}.svg?profile=…`, never calls GitHub) with Markdown, HTML or URL snippets.
@@ -50,7 +50,8 @@ flowchart TD
     C -- yes --> R["Report page"]
     C -- no --> L["Per-visitor rate limit"]
     L --> F["Fetch repo metadata<br/>6 read-only GitHub API calls, run concurrently"]
-    F --> S["Check 7 dimensions, then score and grade<br/>(MetricsService, rules as constants)"]
+    F --> D["Read root dependency files, check pinned<br/>versions on OSV.dev (never fails the analysis)"]
+    D --> S["Check 7 dimensions, then score and grade<br/>(MetricsService, rules as constants)"]
     S --> DB[("SQLite")]
     DB --> R
     R --> N["Evidence per check, fixes with points,<br/>Markdown export, README badge, compare"]
@@ -58,7 +59,7 @@ flowchart TD
     S -. progress events .-> UI
 ```
 
-1. **Fetch repo metadata.** `GitHubService` reads repository stats, the root file listing, languages, contributors, commits from the last 30 days and the workflow folder, using one shared `httpx.AsyncClient` and `asyncio.gather` (if one call fails, the others are cancelled). It never clones the repository or downloads source files.
+1. **Fetch repo metadata.** `GitHubService` reads repository stats, the root file listing, languages, contributors, commits from the last 30 days and the workflow folder, using one shared `httpx.AsyncClient` and `asyncio.gather` (if one call fails, the others are cancelled). It never clones the repository or downloads source files. Afterwards `dependency_service.py` downloads the dependency files found in the root (at most seven) and asks OSV.dev about the pinned versions; this does not change the score.
 2. **Check 7 dimensions.** `MetricsService` looks for things like a README, license, test folder, CI workflows, lockfile, `SECURITY.md`, linter and type-checker config, recent commits and open issues.
 3. **Score and grade.** Points add up to 100 and map to a grade (A+ is 95 and above, F is below 35) and a tier (Strong Codebase, Moderate Health, Needs Optimization).
 4. **Suggest next steps.** Each failed check adds a finding and, where there is an obvious fix, a recommendation. The report lines every finding up with its check and ranks the fixes by the points they add.
@@ -72,7 +73,7 @@ flowchart TD
 | Language | Python 3.11+ |
 | Web framework | FastAPI (async), server-rendered Jinja2 templates |
 | GitHub client | httpx `AsyncClient`, shared for the app's lifetime |
-| Storage | SQLite via SQLAlchemy 2, migrations with Alembic |
+| Storage | SQLite by default (PostgreSQL optional) via SQLAlchemy 2, migrations with Alembic |
 | Vulnerability data | OSV.dev (free API, no key; failures degrade to "couldn't check") |
 | CLI | Typer and Rich |
 | Front end | Plain CSS, inline SVG charts and one vanilla JavaScript file, no build step |
@@ -99,7 +100,7 @@ uvicorn main:app --reload
 
 Open <http://127.0.0.1:8000>. On first start the empty database is filled with the example reports from `app/seed/examples.json` (set `SEED_EXAMPLES=false` to skip this).
 
-Without a token GitHub allows 60 API requests per hour, about ten analyses. A token raises that to 5,000:
+Without a token GitHub allows 60 API requests per hour, which is five to ten analyses (each uses six requests, plus one for each dependency file it finds). A token raises that to 5,000:
 
 ```bash
 export GITHUB_TOKEN="your_token"       # Windows (PowerShell): $env:GITHUB_TOKEN="your_token"
@@ -199,13 +200,13 @@ ruff check app tests
 black --check app tests
 ```
 
-Unit tests cover the scorer, the scoring page generator (it runs the real scorer against the page's numbers), the report evidence (it runs the real scorer over about 900 generated repositories and checks every dimension adds up), the fix plan, the progress events, cancelling the other GitHub calls when one fails, the charts, the badge, the Markdown export, the GitHub client, the rate limiter (including refunds) and the CLI. Integration tests drive every page and API endpoint, including the progress stream, renamed repositories, the "Analyze again" hand-off and the error states, through FastAPI's `TestClient` with GitHub mocked, so the suite needs no network.
+Unit tests cover the scorer, the dependency parsers and OSV lookup (with a faked OSV), `action.yml`, the scoring page generator (it runs the real scorer against the page's numbers), the report evidence (it runs the real scorer over about 900 generated repositories and checks every dimension adds up), the fix plan, the progress events, cancelling the other GitHub calls when one fails, the charts, the badge, the Markdown export, the GitHub client, the rate limiter (including refunds) and the CLI. Integration tests drive every page and API endpoint, including the progress stream, renamed repositories, the "Analyze again" hand-off and the error states, through FastAPI's `TestClient` with GitHub mocked, so the suite needs no network.
 
 ## Performance
 
 Measured with [Locust](https://locust.io) against a local server that serves stored reports only, so no request reaches GitHub (the server log confirmed no analysis ran and no call to `api.github.com` was made). These are numbers from one laptop, not a promise about Render's free instance, which has less CPU and sleeps when idle.
 
-**Method.** The database is seeded by `tests/load/seed_reports.py` with 60 repositories and 180 stored reports (every third one with a dependency scan). The server starts with the same command as `render.yaml` and the Dockerfile, with one uvicorn process on SQLite and default logging. Locust runs in the same machine for 60 seconds with 20 and then 50 simulated visitors (ramp of 10 users a second, 0.2 to 1 second of think time between actions), each repeatedly picking a random action: report page (weight 6), badge (4), history page (3), API list (3), API detail (2), repository permalink, Markdown export and a stored-report comparison (1 each). Every response must be HTTP 200.
+**Method.** The database is seeded by `tests/load/seed_reports.py` with 60 repositories and 180 stored reports (every third one with a dependency scan). The server starts with the same command as `render.yaml` and the Dockerfile, with one uvicorn process on SQLite and default logging. Locust runs on the same machine for 60 seconds with 20 and then 50 simulated visitors (ramp of 10 users a second, 0.2 to 1 second of think time between actions), each repeatedly picking a random action: report page (weight 6), badge (4), history page (3), API list (3), API detail (2), repository permalink, Markdown export and a stored-report comparison (1 each). Every response must be HTTP 200.
 
 ```bash
 export DATABASE_URL=sqlite:///./load.db SEED_EXAMPLES=false
@@ -271,7 +272,7 @@ Interactive documentation: Swagger UI at `/docs`, ReDoc at `/redoc`.
 | Method | Endpoint | Returns |
 | :--- | :--- | :--- |
 | `POST` | `/api/v1/analyze` | Analyzes `{"url": "owner/repo", "repo_type": "library"}`. `201` with a new report, or `200` when a report of the same repository and profile from the last hour is reused |
-| `POST` | `/api/v1/analyze/stream` | The same analysis, streaming its progress as newline-delimited JSON (`validate`, `reuse`, `fetch` per GitHub call, `analyze`, `score`, `save`), then a `done` event with the report's address or an `error` event with the codes below |
+| `POST` | `/api/v1/analyze/stream` | The same analysis, streaming its progress as newline-delimited JSON (`validate`, `reuse`, `fetch` per GitHub call, `dependencies`, `analyze`, `score`, `save`), then a `done` event with the report's address or an `error` event with the codes below |
 | `GET` | `/api/v1/analyses/{id}` | The full report as JSON |
 | `GET` | `/api/v1/analyses/{id}/markdown` | The report as Markdown (`text/markdown`), with the fixes and the points they add |
 | `GET` | `/api/v1/analyses` | Paginated list, filterable: `?offset=0&limit=20&min_score=80&repo_type=library` |
@@ -313,7 +314,8 @@ ArchLens/
 │   │   └── badge.py            # README badge (stored results only)
 │   ├── schemas/                # Pydantic request and response models
 │   ├── services/
-│   │   ├── analysis_service.py # The pipeline: validate, reuse, rate-limit, fetch, score, store; reports progress
+│   │   ├── analysis_service.py # The pipeline: validate, reuse, rate-limit, fetch, scan dependencies, score, store; reports progress
+│   │   ├── dependency_service.py # Dependency files, OSV.dev vulnerability check
 │   │   ├── github_service.py   # Async GitHub REST client with retries
 │   │   ├── metrics_service.py  # Scoring rules (constants) and the scorer
 │   │   ├── scoring_guide.py    # Builds the /scoring page from those constants
@@ -326,21 +328,26 @@ ArchLens/
 │   ├── seed/examples.json      # Example reports loaded into an empty database
 │   ├── templates/              # Jinja2 pages and shared macros (_ui.html: icons, gauge, radar)
 │   └── static/                 # CSS, one JavaScript file, favicon
+├── action.yml                  # Composite GitHub Action
 ├── alembic/                    # Database migrations
 ├── docs/
 │   ├── process-flows.md        # Every user and system flow, with diagrams
+│   ├── roadmap.md              # What was built next, and what was left out
+│   ├── walkthroughs/           # One write-up per feature
 │   └── screenshots/            # Images used in this README
 ├── scripts/                    # Example-report builder and seeding helpers
 ├── tests/
 │   ├── unit/                   # Scorer, scoring guide, evidence, charts, badge, export, GitHub client, rate limiter
-│   └── integration/            # Every page, API endpoint and user flow, including the progress stream, GitHub mocked
+│   ├── integration/            # Every page, API endpoint and user flow, including the progress stream, GitHub mocked
+│   └── load/                   # Locust load test and its seeding script
+├── docker-compose.yml          # Local PostgreSQL
 ├── Dockerfile                  # Multi-stage image, non-root user, health check
 └── render.yaml                 # Render Blueprint
 ```
 
 ## Limitations
 
-- **Metadata only.** ArchLens reads repository statistics and the root file listing. It does not read source files, run tests or measure coverage.
+- **Metadata and dependency files only.** ArchLens reads repository statistics, the root file listing and the dependency files in the root. It does not read source files, run tests or measure coverage.
 - **Heuristics, not ground truth.** A file earns points by existing, whatever its quality, and stars are a weak proxy for health. Read a low score as a list of things to look at, not a verdict.
 - **Capped counts.** Contributors and recent commits come from one page of GitHub results, so they stop at 100 and show as "100+".
 - **Single instance.** The rate limiter lives in memory and resets on restart.

@@ -5,8 +5,9 @@ from datetime import datetime
 import pytest
 
 from app.models.db_models import Analysis, Metric, Repository
+from app.services.dependency_service import DependencyScan
 from app.services.metrics_service import DIMENSION_LABELS, DIMENSION_MAX_POINTS
-from app.services.report_export import markdown_filename, report_to_markdown
+from app.services.report_export import _dependency_lines, markdown_filename, report_to_markdown
 from app.services.report_view import (
     DimensionScore,
     build_report_view,
@@ -143,3 +144,13 @@ class TestComparisonSummary:
 
     def test_one_point_is_singular(self, report):
         assert "scores 1 point higher" in describe_comparison(report, replace(report, score=76))
+
+
+@pytest.mark.parametrize("status", ["none", "error"])
+def test_no_vulnerability_section_without_readable_dependency_files(status):
+    """Like the report page, the export says nothing about vulnerabilities when no dependency file was read."""
+    notes = ["The dependency files could not be read."] if status == "error" else []
+    lines = _dependency_lines(DependencyScan(status=status, notes=notes))
+    assert "## Dependencies" in lines
+    assert "## Known vulnerabilities" not in lines
+    assert not any("exact version" in line for line in lines)

@@ -77,7 +77,7 @@
     </div>
 
     {% if scan.vulnerability_check == "unavailable" %}
-    <p class="dim-note">{{ ui.icon("alert") }}Couldn&rsquo;t check: OSV.dev did not answer in time. The dependencies above are still listed. Analyze again later to retry.</p>
+    <p class="dim-note">{{ ui.icon("alert") }}Couldn&rsquo;t check: OSV.dev did not answer. The dependencies above are still listed. Analyze again later to retry.</p>
     {% elif scan.vulnerability_check == "skipped" %}
     <p class="dim-note">{{ ui.icon("info") }}Nothing to check: no dependency has an exact version. Pin versions (<code>==</code> in requirements, a lockfile for npm) to get a vulnerability check.</p>
     {% elif not scan.vulnerabilities %}

@@ -147,7 +147,7 @@ def test_analyze_prints_dependencies_and_vulnerabilities_with_the_fix(mock_async
     }
     result = runner.invoke(app, ["analyze", "test/repo"])
     assert result.exit_code == 0
-    assert "1 direct dependencies (1 pinned)" in result.stdout
+    assert "1 direct dependency (1 pinned)" in result.stdout
     assert "GHSA-aaaa" in result.stdout and "upgrade to 2.11.3" in result.stdout
     assert "0-100 score" in result.stdout
 

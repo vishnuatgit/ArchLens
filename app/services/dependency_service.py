@@ -139,7 +139,8 @@ class DependencyScan:
             return "No supported dependency file in the repository root."
         if self.status == "error":
             return "Dependencies could not be read."
-        text = f"{len(self.dependencies)} direct dependencies ({self.pinned_count} pinned). "
+        total = len(self.dependencies)
+        text = f"{total} direct {'dependency' if total == 1 else 'dependencies'} ({self.pinned_count} pinned). "
         if self.vulnerability_check == "unavailable":
             return text + "Vulnerabilities could not be checked (OSV.dev did not answer)."
         if self.vulnerability_check == "skipped":
