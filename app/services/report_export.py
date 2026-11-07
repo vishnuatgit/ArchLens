@@ -141,3 +141,78 @@ def report_to_markdown(report: ReportView, report_url: str | None = None) -> str
 def markdown_filename(report: ReportView) -> str:
     """A download name such as 'archlens-psf-requests-2026-10-31.md'."""
     return f"archlens-{report.owner}-{report.name}-{report.created_at:%Y-%m-%d}.md".lower()
+
+
+# Hidden marker that lets the GitHub Action find its own pull-request comment and update it
+COMMENT_MARKER = "<!-- archlens-health-comment -->"
+COMMENT_FIX_LIMIT = 3
+
+
+def _top_fixes(report: ReportView, limit: int = COMMENT_FIX_LIMIT):
+    plan = build_fix_plan(report, build_evidence(report))
+    return list(plan.fixes[:limit]) if plan else []
+
+
+def report_to_comment(report: ReportView, report_url: str | None = None) -> str:
+    """A short Markdown comment for a pull request: score, grade, top fixes, dependencies."""
+    lines = [
+        COMMENT_MARKER,
+        f"### ArchLens health: {report.score}/100 ({report.grade})",
+        "",
+        f"**{report.full_name}** is rated *{report.tier.label}* under the "
+        f"{report.profile_label.lower()} profile.",
+        "",
+    ]
+    fixes = _top_fixes(report)
+    if fixes:
+        lines += ["**Top fixes**", ""]
+        lines += [
+            f"{number}. {fix.action} ({'' if fix.exact else 'up to '}+{fix.gain} points)"
+            for number, fix in enumerate(fixes, 1)
+        ]
+        lines.append("")
+    if report.dependency_scan is not None:
+        lines += [f"**Dependencies:** {report.dependency_scan.summary_line}", ""]
+    footer = f"Updated by [ArchLens]({SITE['repo_url']})"
+    if report_url:
+        footer += f" · [full report]({report_url})"
+    lines += [f"<sub>{footer}</sub>", ""]
+    return "\n".join(lines)
+
+
+def report_to_summary(report: ReportView) -> dict:
+    """The machine-readable summary printed by `archlens analyze --format json`."""
+    scan = report.dependency_scan
+    checked = scan is not None and scan.vulnerability_check == "ok"
+    return {
+        "repository": report.full_name,
+        "url": report.url,
+        "profile": report.repo_type,
+        "score": report.score,
+        "grade": report.grade,
+        "tier": report.tier.label,
+        "analyzed_at": report.created_at.isoformat(timespec="seconds"),
+        "dimensions": {d.key: {"points": d.points, "max": d.max_points} for d in report.dimensions},
+        "top_fixes": [
+            {
+                "action": fix.action,
+                "gain": fix.gain,
+                "exact": fix.exact,
+                "dimension": fix.dimension_label,
+            }
+            for fix in _top_fixes(report, limit=10)
+        ],
+        "dependencies": (
+            None
+            if scan is None
+            else {
+                "status": scan.status,
+                "total": len(scan.dependencies),
+                "pinned": scan.pinned_count,
+                "vulnerability_check": scan.vulnerability_check,
+                "vulnerabilities": scan.to_dict()["vulnerabilities"] if checked else [],
+            }
+        ),
+        # None when nothing could be checked, so a gate never mistakes "unknown" for "zero"
+        "vulnerability_count": len(scan.vulnerabilities) if checked else None,
+    }

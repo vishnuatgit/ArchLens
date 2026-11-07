@@ -1,5 +1,9 @@
 import asyncio
+import json
 import sys
+from contextlib import nullcontext
+from enum import StrEnum
+from pathlib import Path
 
 # Force UTF-8 encoding for Windows console (fixes UnicodeEncodeError for checkmarks)
 if sys.stdout.encoding.lower() != "utf-8":
@@ -16,13 +20,28 @@ from app.exceptions import (
     RateLimitExceededError,
     RepositoryNotFoundError,
 )
+from app.models.db_models import Analysis
 from app.repositories.db import SessionLocal
 from app.services.analysis_service import AnalysisService
 from app.services.dependency_service import SCORE_NOTE, DependencyScan
 from app.services.metrics_service import DIMENSION_MAX_POINTS, score_tier
+from app.services.report_export import report_to_comment, report_to_markdown, report_to_summary
+from app.services.report_view import ReportView, build_report_view
 
 app = typer.Typer(help="ArchLens CLI - engineering health scoring for GitHub repositories")
 console = Console()
+# Messages that must not mix with a Markdown or JSON report printed on stdout
+err_console = Console(stderr=True)
+
+# Exit codes: 0 success, 1 the analysis failed, 2 the score is below --min-score
+EXIT_ERROR = 1
+EXIT_BELOW_MIN_SCORE = 2
+
+
+class OutputFormat(StrEnum):
+    RICH = "rich"
+    MARKDOWN = "markdown"
+    JSON = "json"
 
 
 @app.callback()
@@ -42,7 +61,10 @@ async def async_analyze(url: str, profile: str) -> dict:
     db = SessionLocal()
     try:
         # Run the full pipeline
-        return await service.run(db=db, url=url, repo_type=profile)
+        result = await service.run(db=db, url=url, repo_type=profile)
+        # The stored report feeds the Markdown, JSON and comment outputs
+        result["report"] = build_report_view(db.get(Analysis, result["analysis_id"]))
+        return result
     finally:
         db.close()
         await service.github.aclose()
@@ -82,53 +104,18 @@ def print_dependencies(scan_data: dict | None) -> None:
     console.print(f"  [dim]{SCORE_NOTE}[/dim]")
 
 
-@app.command()
-def analyze(
-    url: str = typer.Argument(
-        ...,
-        help="The public GitHub repository URL to analyze (e.g., https://github.com/fastapi/fastapi)",
-    ),
-    profile: str = typer.Option(
-        "library",
-        "--profile",
-        "-p",
-        help="Repository profile type: 'library', 'personal', or 'enterprise'",
-    ),
-):
-    """
-    Run an engineering analysis on a GitHub repository.
-    """
-    console.print(
-        f"[bold cyan]ArchLens CLI[/bold cyan] » Analyzing [bold]{url}[/bold] (Profile: {profile})"
+def write_report_files(report: ReportView, directory: Path) -> None:
+    """Writes report.md, result.json and comment.md for the GitHub Action to publish."""
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "report.md").write_text(report_to_markdown(report), encoding="utf-8")
+    (directory / "result.json").write_text(
+        json.dumps(report_to_summary(report), indent=2), encoding="utf-8"
     )
+    (directory / "comment.md").write_text(report_to_comment(report), encoding="utf-8")
 
-    # Run the analysis with a spinning progress indicator
-    with console.status(
-        "[bold green]Fetching repository data and running analysis...", spinner="dots"
-    ):
-        try:
-            result = asyncio.run(async_analyze(url, profile))
-        except InvalidRepositoryURLError:
-            console.print(
-                f"[bold red]Error:[/bold red] Invalid GitHub repository URL provided: {url}"
-            )
-            raise typer.Exit(code=1)
-        except RepositoryNotFoundError as e:
-            console.print(f"[bold red]Error:[/bold red] {str(e)}")
-            raise typer.Exit(code=1)
-        except RateLimitExceededError as e:
-            console.print(
-                f"[bold red]Error:[/bold red] GitHub API rate limit exceeded. Reset time: {e.reset_epoch}"
-            )
-            raise typer.Exit(code=1)
-        except ArchLensError as e:
-            console.print(f"[bold red]Error:[/bold red] {e.message}")
-            raise typer.Exit(code=1)
-        except Exception as e:
-            console.print(f"[bold red]Error:[/bold red] An unexpected error occurred: {str(e)}")
-            raise typer.Exit(code=1)
 
-    # Output formatting
+def print_rich_report(result: dict) -> None:
+    """The terminal report: summary panel, dimension table, findings, dependencies."""
     console.print("\n[bold green]✔ Analysis Complete[/bold green]")
 
     score = result["score"]
@@ -180,6 +167,97 @@ def analyze(
 
     print_dependencies(result.get("dependency_scan"))
     console.print("\n")
+
+
+@app.command()
+def analyze(
+    url: str = typer.Argument(
+        ...,
+        help="The public GitHub repository URL to analyze (e.g., https://github.com/fastapi/fastapi)",
+    ),
+    profile: str = typer.Option(
+        "library",
+        "--profile",
+        "-p",
+        help="Repository profile type: 'library', 'personal', or 'enterprise'",
+    ),
+    output_format: OutputFormat = typer.Option(
+        OutputFormat.RICH,
+        "--format",
+        "-f",
+        help="rich (terminal report), markdown or json. The last two print only the report.",
+    ),
+    min_score: int | None = typer.Option(
+        None,
+        "--min-score",
+        min=0,
+        max=100,
+        help="Exit with code 2 when the score is below this (the report is still printed).",
+    ),
+    output_dir: Path | None = typer.Option(
+        None,
+        "--output-dir",
+        help="Also write report.md, result.json and comment.md into this folder.",
+    ),
+):
+    """
+    Run an engineering analysis on a GitHub repository.
+    """
+    rich_output = output_format is OutputFormat.RICH
+    # A Markdown or JSON report owns stdout, so messages go to stderr instead
+    notify = console if rich_output else err_console
+    if rich_output:
+        console.print(
+            f"[bold cyan]ArchLens CLI[/bold cyan] » Analyzing [bold]{url}[/bold] (Profile: {profile})"
+        )
+
+    # Run the analysis with a spinning progress indicator
+    spinner = (
+        console.status(
+            "[bold green]Fetching repository data and running analysis...", spinner="dots"
+        )
+        if rich_output
+        else nullcontext()
+    )
+    with spinner:
+        try:
+            result = asyncio.run(async_analyze(url, profile))
+        except InvalidRepositoryURLError:
+            notify.print(
+                f"[bold red]Error:[/bold red] Invalid GitHub repository URL provided: {url}"
+            )
+            raise typer.Exit(code=EXIT_ERROR)
+        except RepositoryNotFoundError as e:
+            notify.print(f"[bold red]Error:[/bold red] {str(e)}")
+            raise typer.Exit(code=EXIT_ERROR)
+        except RateLimitExceededError as e:
+            notify.print(
+                f"[bold red]Error:[/bold red] GitHub API rate limit exceeded. Reset time: {e.reset_epoch}"
+            )
+            raise typer.Exit(code=EXIT_ERROR)
+        except ArchLensError as e:
+            notify.print(f"[bold red]Error:[/bold red] {e.message}")
+            raise typer.Exit(code=EXIT_ERROR)
+        except Exception as e:
+            notify.print(f"[bold red]Error:[/bold red] An unexpected error occurred: {str(e)}")
+            raise typer.Exit(code=EXIT_ERROR)
+
+    report = result.get("report")
+    if output_dir is not None and report is not None:
+        write_report_files(report, output_dir)
+
+    if output_format is OutputFormat.MARKDOWN:
+        typer.echo(report_to_markdown(report))
+    elif output_format is OutputFormat.JSON:
+        typer.echo(json.dumps(report_to_summary(report), indent=2))
+    else:
+        print_rich_report(result)
+
+    if min_score is not None and result["score"] < min_score:
+        notify.print(
+            f"[bold red]Score {result['score']} is below the minimum of {min_score}.[/bold red]"
+        )
+        raise typer.Exit(code=EXIT_BELOW_MIN_SCORE)
 
 
 if __name__ == "__main__":

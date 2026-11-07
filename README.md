@@ -110,7 +110,11 @@ From the command line:
 ```bash
 archlens analyze psf/requests
 archlens analyze https://github.com/pallets/flask --profile personal
+archlens analyze psf/requests --format json --min-score 70   # machine-readable; exit code 2 if below 70
+archlens analyze psf/requests --format markdown --output-dir out/   # also writes report.md, result.json, comment.md
 ```
+
+`--format` is `rich` (default), `markdown` or `json`; the last two print only the report on stdout and send messages to stderr. Exit codes: `0` success, `1` the analysis failed, `2` the score is below `--min-score`.
 
 ### Configuration
 
@@ -125,6 +129,44 @@ archlens analyze https://github.com/pallets/flask --profile personal
 | `SEED_EXAMPLES` | `true` | Load the example reports into an empty database on startup |
 
 Copy `.env.example` to `.env` to set these locally. `python scripts/build_examples.py` regenerates the bundled example reports from live analyses.
+
+## GitHub Action
+
+ArchLens ships a composite GitHub Action (`action.yml` at the repository root). It installs ArchLens from this repository, analyzes a repository with the workflow's own `GITHUB_TOKEN`, writes the Markdown report to the job summary, exposes outputs, can fail the job below a minimum score and can keep one comment up to date on pull requests.
+
+```yaml
+name: Repository health
+on:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+  pull-requests: write   # only needed for comment: true
+
+jobs:
+  archlens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: vishnuatgit/ArchLens@main
+        id: health
+        with:
+          min-score: 60        # optional: fail the job below this score
+          comment: true        # optional: one comment on pull requests, updated in place
+      - run: echo "Score ${{ steps.health.outputs.score }} (${{ steps.health.outputs.grade }}), ${{ steps.health.outputs.vulnerabilities }} known vulnerabilities"
+```
+
+| Input | Default | Meaning |
+| :--- | :--- | :--- |
+| `repository` | the current repository | `owner/name` to analyze |
+| `profile` | `library` | `library`, `personal` or `enterprise` |
+| `min-score` | empty (never fails) | fail the job when the score is lower |
+| `comment` | `false` | on `pull_request` events, post or update a single ArchLens comment (score, grade, top fixes, dependency summary) |
+| `github-token` | `github.token` | token used to read repository metadata |
+| `python-version` | `3.11` | Python used to run ArchLens |
+
+Outputs: `score`, `grade`, and `vulnerabilities` (known vulnerabilities in pinned dependencies; empty when they could not be checked). Notes: use an Ubuntu runner; pull requests from forks get a read-only token, so the comment is skipped with a warning and the rest still works; the score describes the repository's metadata, not the pull request's diff. This repository runs the action on itself weekly and on demand (`.github/workflows/archlens-health.yml`). Details in [docs/walkthroughs/02-github-action.md](docs/walkthroughs/02-github-action.md).
 
 ## Tests
 

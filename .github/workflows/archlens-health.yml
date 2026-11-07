@@ -1,0 +1,31 @@
+name: ArchLens health
+
+# Runs ArchLens's own action on this repository: on demand and once a week.
+# Not on every push: the score reads repository metadata, which rarely changes between commits.
+on:
+  workflow_dispatch:
+    inputs:
+      min-score:
+        description: Fail when the score is below this (0-100). Empty means never fail.
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ArchLens
+        id: archlens
+        uses: ./
+        with:
+          min-score: ${{ inputs.min-score }}
+      - name: Show outputs
+        run: |
+          echo "Score: ${{ steps.archlens.outputs.score }} (${{ steps.archlens.outputs.grade }})"
+          echo "Known vulnerabilities: ${{ steps.archlens.outputs.vulnerabilities }}"
