@@ -173,7 +173,7 @@ def print_rich_report(result: dict) -> None:
 def analyze(
     url: str = typer.Argument(
         ...,
-        help="The public GitHub repository URL to analyze (e.g., https://github.com/fastapi/fastapi)",
+        help="The public GitHub repository to analyze, as a URL or owner/repo (e.g., https://github.com/fastapi/fastapi or fastapi/fastapi)",
     ),
     profile: str = typer.Option(
         "library",
