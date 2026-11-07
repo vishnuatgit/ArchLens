@@ -270,7 +270,7 @@ async def analyze_repository_stream(
     summary="Get Analysis Report Details",
     description="Fetches full metric breakdown and analysis findings for a specific scan ID.",
 )
-async def get_analysis_by_id(
+def get_analysis_by_id(
     analysis_id: int,
     db: Session = Depends(get_db),
     repo_svc: RepositoryService = Depends(get_repository_service),
@@ -293,7 +293,7 @@ async def get_analysis_by_id(
         404: {"model": ErrorResponse, "description": "Analysis not found"},
     },
 )
-async def get_analysis_markdown(
+def get_analysis_markdown(
     analysis_id: int,
     request: Request,
     db: Session = Depends(get_db),
@@ -317,7 +317,7 @@ async def get_analysis_markdown(
     summary="List Analysis Runs",
     description="Returns a paginated list of historical repository analyses with optional filtering.",
 )
-async def list_analyses(
+def list_analyses(
     offset: int = Query(0, ge=0, le=2**31 - 1, description="Offset pagination index"),
     limit: int = Query(20, ge=1, le=100, description="Page limit size"),
     repo_type: RepoType | None = Query(None, description="Filter by repository profile"),

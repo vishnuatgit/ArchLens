@@ -3,15 +3,14 @@ Shared pytest configuration for integration tests.
 Creates the in-memory test database schema before the test session starts.
 """
 
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.models import db_models  # noqa: F401 — register all ORM models on Base
 from app.repositories.db import Base
+from tests.db import make_engine
 
-TEST_DB_URL = "sqlite:///./test_integration.db"
-
-test_engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+# SQLite by default; TEST_DATABASE_URL points the whole suite at another database (see tests/db.py)
+test_engine = make_engine("sqlite:///./test_integration.db")
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 

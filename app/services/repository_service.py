@@ -20,8 +20,9 @@ HISTORY_SORTS = {
 }
 
 
-# Largest integer SQLite can store; also the bound for hand-edited offsets and IDs
-SQLITE_MAX_INT = 2**63 - 1
+# Largest value of an Integer id column: 32 bits on PostgreSQL (SQLite would allow more).
+# An id above it cannot exist, and PostgreSQL would raise an error instead of finding nothing.
+MAX_ID = 2**31 - 1
 
 
 class RepositoryService:
@@ -149,8 +150,8 @@ class RepositoryService:
         """
         Retrieves a single analysis record by primary key, including related metrics.
         """
-        # An ID beyond SQLite's integer range cannot exist (and would raise OverflowError)
-        if not 0 < analysis_id <= SQLITE_MAX_INT:
+        # An ID beyond the column's range cannot exist (and would raise an error on the database)
+        if not 0 < analysis_id <= MAX_ID:
             return None
         return db.query(Analysis).filter(Analysis.id == analysis_id).first()
 

@@ -38,6 +38,11 @@ dev = [
     "black>=24.4.2",
     "pre-commit>=3.7.1",
     "pyyaml>=6.0",
+    "locust>=2.29",
+]
+# Optional: run on PostgreSQL instead of SQLite (set DATABASE_URL to a postgresql:// URL)
+postgres = [
+    "psycopg[binary]>=3.1",
 ]
 
 [tool.pytest.ini_options]
