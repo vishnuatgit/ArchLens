@@ -1,0 +1,145 @@
+name: ArchLens health check
+description: >-
+  Score a GitHub repository's engineering health (0-100), write the report to the job summary,
+  optionally fail below a minimum score, and optionally keep one pull-request comment up to date.
+author: vishnuatgit
+branding:
+  icon: activity
+  color: blue
+
+inputs:
+  repository:
+    description: Repository to analyze as owner/name. Defaults to the repository running the workflow.
+    required: false
+    default: ${{ github.repository }}
+  profile:
+    description: "Scoring profile: library, personal or enterprise."
+    required: false
+    default: library
+  min-score:
+    description: Fail the job when the score is below this number (0-100). Leave empty to never fail.
+    required: false
+    default: ""
+  comment:
+    description: >-
+      "true" to post or update a single ArchLens comment on pull requests (needs
+      `pull-requests: write` permission). Ignored on other events.
+    required: false
+    default: "false"
+  github-token:
+    description: Token used to read repository metadata from the GitHub API.
+    required: false
+    default: ${{ github.token }}
+  python-version:
+    description: Python version used to run ArchLens (3.11 or newer).
+    required: false
+    default: "3.11"
+
+outputs:
+  score:
+    description: The 0-100 health score.
+    value: ${{ steps.analyze.outputs.score }}
+  grade:
+    description: The letter grade, A+ to F.
+    value: ${{ steps.analyze.outputs.grade }}
+  vulnerabilities:
+    description: Number of known vulnerabilities in pinned dependencies. Empty when they could not be checked.
+    value: ${{ steps.analyze.outputs.vulnerabilities }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install ArchLens
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: python -m pip install --quiet --editable "$ACTION_PATH"
+
+    - name: Analyze
+      id: analyze
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPOSITORY: ${{ inputs.repository }}
+        PROFILE: ${{ inputs.profile }}
+        MIN_SCORE: ${{ inputs.min-score }}
+      run: |
+        out="$RUNNER_TEMP/archlens"
+        mkdir -p "$out"
+        # A throwaway database: the CLI stores its report like the web app does
+        export DATABASE_URL="sqlite:///${out//\\//}/archlens.db"
+        export OUT_DIR="$out"
+        alembic -c "$ACTION_PATH/alembic.ini" upgrade head > /dev/null
+
+        args=(analyze "$REPOSITORY" --profile "$PROFILE" --format json --output-dir "$out")
+        if [ -n "$MIN_SCORE" ]; then args+=(--min-score "$MIN_SCORE"); fi
+
+        set +e
+        archlens "${args[@]}"
+        code=$?
+        set -e
+
+        # 1 means the analysis itself failed; 2 means the score is below min-score
+        if [ "$code" -eq 1 ]; then
+          echo "::error::ArchLens could not analyze $REPOSITORY. See the log above."
+          exit 1
+        fi
+
+        python - <<'PY'
+        import json
+        import os
+
+        with open(os.path.join(os.environ["OUT_DIR"], "result.json"), encoding="utf-8") as f:
+            result = json.load(f)
+        count = result["vulnerability_count"]
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write(f"score={result['score']}\n")
+            f.write(f"grade={result['grade']}\n")
+            f.write(f"vulnerabilities={'' if count is None else count}\n")
+        PY
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+
+    - name: Write job summary
+      shell: bash
+      run: cat "$RUNNER_TEMP/archlens/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Post or update the pull-request comment
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      # Pull requests from forks get a read-only token and cannot comment: warn, do not fail
+      continue-on-error: true
+      uses: actions/github-script@v7
+      env:
+        COMMENT_FILE: ${{ runner.temp }}/archlens/comment.md
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('fs');
+          const body = fs.readFileSync(process.env.COMMENT_FILE, 'utf8');
+          const marker = '<!-- archlens-health-comment -->';
+          const { owner, repo } = context.repo;
+          const issue_number = context.payload.pull_request.number;
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner, repo, issue_number, per_page: 100,
+          });
+          const existing = comments.find((c) => c.body && c.body.includes(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+          } else {
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
+          }
+
+    - name: Enforce the minimum score
+      if: steps.analyze.outputs.exit-code == '2'
+      shell: bash
+      env:
+        SCORE: ${{ steps.analyze.outputs.score }}
+        MIN_SCORE: ${{ inputs.min-score }}
+      run: |
+        echo "::error::ArchLens score $SCORE is below the minimum of $MIN_SCORE."
+        exit 1

@@ -7,3 +7,4 @@ pytest-mock>=3.14.0
 # Keep in sync with the lint job in .github/workflows/ci.yml
 ruff==0.17.2
 black==26.10.1
+pyyaml>=6.0

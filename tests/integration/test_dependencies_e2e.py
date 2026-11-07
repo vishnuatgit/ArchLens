@@ -205,3 +205,47 @@ def test_stream_reports_a_dependencies_step():
     deps = [e for e in events if e.get("step") == "dependencies" and "vulnerabilities" in e]
     assert deps and deps[0]["vulnerabilities"] == 1
     assert events[-1]["event"] == "done"
+
+
+def test_cli_runs_the_real_pipeline_and_writes_the_files_the_action_publishes(
+    monkeypatch, tmp_path
+):
+    """The CLI as the GitHub Action runs it: real service and database, fake GitHub and OSV."""
+    import json as json_module
+
+    from typer.testing import CliRunner
+
+    from app import cli
+
+    def fake_service():
+        service = AnalysisService(osv_client=fake_osv())
+        service.github._client = fake_github(
+            ["README.md", "requirements.txt"], {"requirements.txt": REQUIREMENTS}
+        )
+        return service
+
+    monkeypatch.setattr(cli, "AnalysisService", fake_service)
+    monkeypatch.setattr(cli, "SessionLocal", TestSessionLocal)
+    out = tmp_path / "out"
+
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "analyze",
+            "acme/widget",
+            "--format",
+            "json",
+            "--output-dir",
+            str(out),
+            "--min-score",
+            "99",
+        ],
+    )
+
+    assert result.exit_code == 2  # the score is below 99, and the report is still produced
+    summary = json_module.loads(result.stdout)
+    assert summary["vulnerability_count"] == 1
+    assert json_module.loads((out / "result.json").read_text(encoding="utf-8")) == summary
+    assert "GHSA-xxxx-yyyy-zzzz" in (out / "report.md").read_text(encoding="utf-8")
+    comment = (out / "comment.md").read_text(encoding="utf-8")
+    assert comment.startswith("<!-- archlens-health-comment -->") and "Top fixes" in comment
