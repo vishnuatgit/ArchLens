@@ -6,7 +6,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.models.db_models import Analysis
-from app.repositories.db import Base
 from app.services.metrics_service import RepoType
 from app.services.seed_service import (
     EXAMPLES_PATH,
@@ -15,12 +14,12 @@ from app.services.seed_service import (
     seed_examples_if_empty,
     seed_examples_on_startup,
 )
+from tests.db import fresh_engine
 
 
 @pytest.fixture
 def session_factory(tmp_path):
-    engine = create_engine(f"sqlite:///{tmp_path / 'seed.db'}")
-    Base.metadata.create_all(bind=engine)
+    engine = fresh_engine(f"sqlite:///{tmp_path / 'seed.db'}")
     yield sessionmaker(bind=engine)
     engine.dispose()
 

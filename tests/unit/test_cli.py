@@ -173,16 +173,14 @@ def test_analyze_says_when_a_stored_report_was_never_scanned(mock_async_analyze)
 @pytest.fixture
 def stored_result():
     """The CLI's result for a real stored analysis, with its ReportView."""
-    from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
-    from app.repositories.db import Base
     from app.services.dependency_service import DependencyScan
     from app.services.report_view import build_report_view
+    from tests.db import fresh_engine
     from tests.integration.test_progress_and_pages import add_analysis
 
-    engine = create_engine("sqlite://")
-    Base.metadata.create_all(bind=engine)
+    engine = fresh_engine()
     with sessionmaker(bind=engine)() as db:
         analysis = add_analysis(db, score=77)
         scan = DependencyScan(status="ok", vulnerability_check="ok", checked=2)

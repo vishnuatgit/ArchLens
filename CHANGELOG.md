@@ -5,6 +5,7 @@ All notable changes to the ArchLens project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Load test and PostgreSQL:** a Locust load test (`tests/load/`, dev dependency only) over stored-report pages, the API, history and badges, with measured latency in the README; `DATABASE_URL` accepts `postgresql://` and `postgres://` URLs (psycopg 3, optional `postgres` extra); `docker-compose.yml` for a local PostgreSQL; a `test-postgres` CI job runs the migrations (up, down, up) and the whole suite on PostgreSQL 16; `TEST_DATABASE_URL` points the tests at any database.
 - **GitHub Action:** `action.yml` (composite) runs the CLI on a repository (default: the current one) with the workflow token, writes the Markdown report to the job summary, sets outputs `score`, `grade` and `vulnerabilities`, fails below an optional `min-score`, and optionally posts or updates one pull-request comment. `.github/workflows/archlens-health.yml` runs it on ArchLens itself weekly and on demand. The CLI gained `--format rich|markdown|json`, `--min-score` (exit code 2 below it) and `--output-dir`.
 - **Dependencies and known vulnerabilities:** reads `requirements*.txt`, `pyproject.toml`, `package.json` (+ lockfile) and `go.mod` from the repository root, lists direct dependencies as pinned or not, and checks pinned versions against OSV.dev with severity, advisory link and the version to upgrade to. Shown on the report page, in the JSON API (`dependency_scan`), the Markdown export and the CLI; stored in a new `metrics.dependencies_json` column (migration `a1c5e8f20b64`). OSV or GitHub trouble degrades to "couldn't check", never a failed analysis. The score formula is unchanged. See `docs/walkthroughs/01-dependency-vulnerabilities.md`.
 - `docs/roadmap.md` now records the decision to build three features and why the other ideas were dropped or deferred.
@@ -51,6 +52,7 @@ All notable changes to the ArchLens project will be documented in this file.
 - FastAPI's minimum version is 0.118, the first that keeps request-scoped dependencies open until a streamed response finishes.
 
 ### Fixed
+- An analysis id larger than 2^31 returned a server error on PostgreSQL instead of "not found".
 - GitHub errors other than 404 or a 403 rate limit (an empty repository's 409, 429 rate limits, a rejected token) returned a bare 500; they now map to clear messages and status codes (422, 503, 502).
 - `repo_type` values outside `library`, `personal` and `enterprise` were accepted.
 - The executive summary produced garbled sentences ("readme. and ... file..") and used different score tiers from the results page.

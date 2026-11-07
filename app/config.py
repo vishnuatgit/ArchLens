@@ -1,4 +1,17 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def normalize_database_url(url: str) -> str:
+    """
+    Points PostgreSQL URLs at the psycopg 3 driver. Hosts such as Neon, Render and Heroku
+    hand out `postgres://` or `postgresql://`, which SQLAlchemy would read as the older
+    psycopg2 driver (or, for `postgres://`, reject). Other URLs are returned unchanged.
+    """
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
+    return url
 
 
 class Settings(BaseSettings):
@@ -19,6 +32,11 @@ class Settings(BaseSettings):
 
     # Load the bundled example reports on startup when the database is empty
     SEED_EXAMPLES: bool = True
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def _use_psycopg_for_postgres(cls, url: str) -> str:
+        return normalize_database_url(url)
 
     # Configure Pydantic to read from .env file if it exists
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

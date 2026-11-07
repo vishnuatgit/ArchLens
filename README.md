@@ -120,7 +120,7 @@ archlens analyze psf/requests --format markdown --output-dir out/   # also write
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
-| `DATABASE_URL` | `sqlite:///./ArchLens.db` | SQLAlchemy database URL |
+| `DATABASE_URL` | `sqlite:///./ArchLens.db` | SQLAlchemy database URL. `postgresql://` and `postgres://` URLs work too (see [PostgreSQL](#postgresql-optional)) |
 | `GITHUB_TOKEN` | unset | Optional GitHub token; raises the API limit from 60 to 5,000 requests per hour |
 | `LOG_LEVEL` | `INFO` | Python logging level |
 | `ANALYSIS_CACHE_MINUTES` | `60` | Reuse a report of the same repository and profile created within this many minutes (`0` disables) |
@@ -129,6 +129,26 @@ archlens analyze psf/requests --format markdown --output-dir out/   # also write
 | `SEED_EXAMPLES` | `true` | Load the example reports into an empty database on startup |
 
 Copy `.env.example` to `.env` to set these locally. `python scripts/build_examples.py` regenerates the bundled example reports from live analyses.
+
+### PostgreSQL (optional)
+
+SQLite is the default and needs nothing. To run on PostgreSQL instead, install the driver and point `DATABASE_URL` at it; `postgresql://` and `postgres://` URLs (what Neon, Render and Heroku hand out) are accepted and switched to the `psycopg` driver automatically.
+
+```bash
+docker compose up -d db                       # PostgreSQL 16 on localhost:5432 (docker-compose.yml)
+pip install -e ".[postgres]"
+export DATABASE_URL=postgresql://archlens:archlens@localhost:5432/archlens
+alembic upgrade head
+uvicorn main:app
+```
+
+The same suite runs against PostgreSQL by setting `TEST_DATABASE_URL` (the tests create and drop their own tables, so use a throwaway database):
+
+```bash
+TEST_DATABASE_URL=postgresql://archlens:archlens@localhost:5432/archlens pytest
+```
+
+CI runs it both ways: the normal jobs use SQLite, and a `test-postgres` job starts a PostgreSQL 16 service container, applies the migrations, rolls them back and applies them again, then runs the whole suite. Running on PostgreSQL turned up one SQLite-only assumption (an id larger than 2^31 raised a database error instead of "not found"), which is fixed and tested.
 
 ## GitHub Action
 
@@ -180,6 +200,39 @@ black --check app tests
 ```
 
 Unit tests cover the scorer, the scoring page generator (it runs the real scorer against the page's numbers), the report evidence (it runs the real scorer over about 900 generated repositories and checks every dimension adds up), the fix plan, the progress events, cancelling the other GitHub calls when one fails, the charts, the badge, the Markdown export, the GitHub client, the rate limiter (including refunds) and the CLI. Integration tests drive every page and API endpoint, including the progress stream, renamed repositories, the "Analyze again" hand-off and the error states, through FastAPI's `TestClient` with GitHub mocked, so the suite needs no network.
+
+## Performance
+
+Measured with [Locust](https://locust.io) against a local server that serves stored reports only, so no request reaches GitHub (the server log confirmed no analysis ran and no call to `api.github.com` was made). These are numbers from one laptop, not a promise about Render's free instance, which has less CPU and sleeps when idle.
+
+**Method.** The database is seeded by `tests/load/seed_reports.py` with 60 repositories and 180 stored reports (every third one with a dependency scan). The server starts with the same command as `render.yaml` and the Dockerfile, with one uvicorn process on SQLite and default logging. Locust runs in the same machine for 60 seconds with 20 and then 50 simulated visitors (ramp of 10 users a second, 0.2 to 1 second of think time between actions), each repeatedly picking a random action: report page (weight 6), badge (4), history page (3), API list (3), API detail (2), repository permalink, Markdown export and a stored-report comparison (1 each). Every response must be HTTP 200.
+
+```bash
+export DATABASE_URL=sqlite:///./load.db SEED_EXAMPLES=false
+alembic upgrade head && python tests/load/seed_reports.py
+alembic upgrade head && uvicorn main:app --host 127.0.0.1 --port 8811     # the Render start command
+locust -f tests/load/locustfile.py --headless -u 50 -r 10 -t 60s --host http://127.0.0.1:8811 --csv load
+```
+
+**Results** (milliseconds; 0 failed requests in both runs):
+
+| Endpoint | 20 users p50 | p95 | max | 50 users p50 | p95 | max |
+| :--- | --: | --: | --: | --: | --: | --: |
+| `GET /analysis/{id}` (report page) | 19 | 49 | 172 | 100 | 340 | 1,170 |
+| `GET /history` | 41 | 92 | 489 | 240 | 550 | 1,249 |
+| `GET /api/v1/analyses` (list) | 38 | 91 | 185 | 250 | 550 | 1,199 |
+| `GET /api/v1/analyses/{id}` | 10 | 37 | 81 | 73 | 340 | 1,194 |
+| `GET /badge/{owner}/{repo}.svg` | 10 | 30 | 141 | 58 | 270 | 882 |
+| `GET /compare` (stored reports) | 20 | 84 | 146 | 110 | 390 | 1,045 |
+| `GET /repo/{owner}/{repo}` (redirect to newest) | 26 | 65 | 131 | 140 | 480 | 2,007 |
+| `GET /api/v1/analyses/{id}/markdown` | 10 | 37 | 47 | 65 | 250 | 903 |
+| **All requests** | **21** | **79** | **1,120** | **120** | **510** | **2,467** |
+| Requests per second | 31.7 | | | 62.0 | | |
+| Requests in the run | 1,872 | | | 3,694 | | |
+
+Machine: AMD Ryzen 5 7530U (6 cores, 12 threads), 14.8 GB RAM, Windows 11, Python 3.11, Locust running on the same machine (so the server and the load generator shared the CPU). The "All requests" row also includes one start-up request per simulated visitor (the first, cold, call that reads the list of reports), which is where most of the largest values come from. Single run per setting, no warm-up pass; repeat it on your own machine before comparing.
+
+What it found: the first attempt at 50 users stalled requests for 30 seconds and raised `QueuePool limit of size 5 overflow 10 reached`. Handlers declared `async def` made blocking database calls on the event loop, so a request waiting for a pooled connection blocked the very loop that had to finish earlier requests to give connections back. The fix: SQLite uses one connection per session instead of a small pool, PostgreSQL gets a larger pool, and the read-only pages and API endpoints are plain `def` functions that run in the thread pool. The numbers above are from after that change. Details in [docs/walkthroughs/03-performance-and-postgres.md](docs/walkthroughs/03-performance-and-postgres.md).
 
 ## Deploy on Render
 

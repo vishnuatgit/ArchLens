@@ -135,7 +135,7 @@ def render_analysis_not_found(request: Request) -> HTMLResponse:
 
 
 @router.get("/", response_class=HTMLResponse)
-async def home(
+def home(
     request: Request,
     url: str = "",
     repo_type: str = "library",
@@ -212,7 +212,7 @@ async def analyze(
 
 
 @router.get("/analysis/{analysis_id}", response_class=HTMLResponse)
-async def results(
+def results(
     request: Request,
     analysis_id: int,
     db: Session = Depends(get_db),
@@ -272,7 +272,7 @@ async def results(
 
 
 @router.get("/analysis/{analysis_id}/report.md")
-async def results_markdown(
+def results_markdown(
     request: Request,
     analysis_id: int,
     db: Session = Depends(get_db),
@@ -295,7 +295,7 @@ async def results_markdown(
 
 
 @router.get("/repo/{owner}/{repo}", response_class=HTMLResponse)
-async def latest_report(
+def latest_report(
     request: Request,
     owner: str,
     repo: str,
@@ -476,7 +476,7 @@ async def compare(
 
 
 @router.get("/history", response_class=HTMLResponse)
-async def history(
+def history(
     request: Request,
     offset: str = "0",
     limit: str = "20",
