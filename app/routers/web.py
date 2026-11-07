@@ -56,6 +56,14 @@ def _profile_or_default(value: str | None) -> str:
     return value if value in PROFILE_VALUES else RepoType.LIBRARY.value
 
 
+def _int_or_default(value: str, default: int) -> int:
+    """A hand-edited number in a query string falls back to its default instead of a JSON error."""
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
 def _retry_headers(retry_after: int | None) -> dict[str, str] | None:
     return {"Retry-After": str(retry_after)} if retry_after else None
 
@@ -470,8 +478,8 @@ async def compare(
 @router.get("/history", response_class=HTMLResponse)
 async def history(
     request: Request,
-    offset: int = 0,
-    limit: int = 20,
+    offset: str = "0",
+    limit: str = "20",
     q: str = "",
     profile: str = "",
     sort: str = "newest",
@@ -482,8 +490,8 @@ async def history(
     Renders the paginated analysis history, filtered by repository name and profile.
     """
     # Clamp or ignore hand-edited query strings instead of failing the page
-    offset = max(offset, 0)
-    limit = min(max(limit, 1), 100)
+    offset = min(max(_int_or_default(offset, 0), 0), 2**31 - 1)
+    limit = min(max(_int_or_default(limit, 20), 1), 100)
     q = q.strip()[:100]
     profile = profile if profile in PROFILE_VALUES else ""
     sort = sort if sort in HISTORY_SORTS else "newest"

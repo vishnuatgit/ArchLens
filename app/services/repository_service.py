@@ -19,6 +19,10 @@ HISTORY_SORTS = {
 }
 
 
+# Largest integer SQLite can store; also the bound for hand-edited offsets and IDs
+SQLITE_MAX_INT = 2**63 - 1
+
+
 class RepositoryService:
     """
     Handles all database persistence operations for repositories, analyses, and metrics.
@@ -142,6 +146,9 @@ class RepositoryService:
         """
         Retrieves a single analysis record by primary key, including related metrics.
         """
+        # An ID beyond SQLite's integer range cannot exist (and would raise OverflowError)
+        if not 0 < analysis_id <= SQLITE_MAX_INT:
+            return None
         return db.query(Analysis).filter(Analysis.id == analysis_id).first()
 
     def find_recent_analysis(

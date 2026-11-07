@@ -312,7 +312,7 @@ async def get_analysis_markdown(
     description="Returns a paginated list of historical repository analyses with optional filtering.",
 )
 async def list_analyses(
-    offset: int = Query(0, ge=0, description="Offset pagination index"),
+    offset: int = Query(0, ge=0, le=2**31 - 1, description="Offset pagination index"),
     limit: int = Query(20, ge=1, le=100, description="Page limit size"),
     repo_type: RepoType | None = Query(None, description="Filter by repository profile"),
     min_score: int | None = Query(None, ge=0, le=100, description="Filter by minimum health score"),
