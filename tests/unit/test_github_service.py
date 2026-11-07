@@ -271,3 +271,20 @@ async def test_start_opens_client_once():
     service.start()
     assert service.client is client
     await service.aclose()
+
+
+async def test_fetch_file_text_asks_for_the_raw_file_and_maps_404_to_none():
+    service = GitHubService(token="t")
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["accept"] = request.headers["Accept"]
+        if request.url.path.endswith("missing.txt"):
+            return httpx.Response(404, json={"message": "Not Found"})
+        return httpx.Response(200, text="flask==3.0.0\n")
+
+    service._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    assert await service.fetch_file_text("o", "r", "requirements.txt") == "flask==3.0.0\n"
+    assert seen["accept"] == "application/vnd.github.raw+json"
+    assert await service.fetch_file_text("o", "r", "missing.txt") is None
+    await service.aclose()

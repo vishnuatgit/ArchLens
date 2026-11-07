@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.models.db_models import Analysis
+from app.services.dependency_service import DependencyScan
 from app.services.metrics_service import (
     API_PAGE_CAP,
     DIMENSION_LABELS,
@@ -63,6 +64,8 @@ class ReportView:
     repo_size: int
     language_count: int
     last_pushed: datetime | None = None
+    # None: the report was stored before dependency scanning existed (older reports, examples)
+    dependency_scan: DependencyScan | None = None
 
     @property
     def full_name(self) -> str:
@@ -140,6 +143,7 @@ def build_report_view(analysis: Analysis) -> ReportView:
         repo_size=m.repo_size if m else 0,
         language_count=m.language_count if m else 0,
         last_pushed=m.last_pushed if m else None,
+        dependency_scan=DependencyScan.from_json(m.dependencies_json) if m else None,
     )
 
 

@@ -18,6 +18,7 @@ from app.exceptions import (
 )
 from app.repositories.db import SessionLocal
 from app.services.analysis_service import AnalysisService
+from app.services.dependency_service import SCORE_NOTE, DependencyScan
 from app.services.metrics_service import DIMENSION_MAX_POINTS, score_tier
 
 app = typer.Typer(help="ArchLens CLI - engineering health scoring for GitHub repositories")
@@ -45,6 +46,40 @@ async def async_analyze(url: str, profile: str) -> dict:
     finally:
         db.close()
         await service.github.aclose()
+
+
+SEVERITY_COLORS = {
+    "critical": "bold red",
+    "high": "red",
+    "medium": "yellow",
+    "low": "cyan",
+    "unknown": "white",
+}
+
+
+def print_dependencies(scan_data: dict | None) -> None:
+    """Prints the dependency summary and the known vulnerabilities, with what to upgrade to."""
+    if not scan_data:
+        console.print("\n[bold]Dependencies:[/bold] not scanned for this stored report.")
+        return
+    scan = DependencyScan.from_dict(scan_data)
+    console.print(f"\n[bold]Dependencies:[/bold] {scan.summary_line}")
+    for ecosystem, members in scan.by_ecosystem():
+        pinned = sum(1 for d in members if d.pinned)
+        console.print(f"  {ecosystem}: {len(members)} ({pinned} pinned)")
+    for note in scan.notes:
+        console.print(f"  [dim]{note}[/dim]")
+
+    if scan.vulnerabilities:
+        table = Table(title="Known vulnerabilities", show_header=True, header_style="bold magenta")
+        for column in ("Severity", "Package", "Advisory", "Fix"):
+            table.add_column(column)
+        for v in scan.vulnerabilities:
+            color = SEVERITY_COLORS[v.severity]
+            fix = f"upgrade to {v.fixed}" if v.fixed else "no fixed version listed"
+            table.add_row(f"[{color}]{v.severity}[/{color}]", f"{v.package} {v.version}", v.id, fix)
+        console.print(table)
+    console.print(f"  [dim]{SCORE_NOTE}[/dim]")
 
 
 @app.command()
@@ -143,6 +178,7 @@ def analyze(
         for i, item in enumerate(result["suggestions"], 1):
             console.print(f"  [bold yellow]{i}.[/bold yellow] {item}")
 
+    print_dependencies(result.get("dependency_scan"))
     console.print("\n")
 
 

@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.db_models import Analysis, Metric, Repository, RepositoryAlias
+from app.services.dependency_service import DependencyScan
 
 logger = logging.getLogger("ArchLens.repository_service")
 
@@ -86,6 +87,7 @@ class RepositoryService:
         recent_commits: list,
         report: dict,
         repo_type: str = "library",
+        dependency_scan: DependencyScan | None = None,
     ) -> Analysis:
         """
         Persists a full analysis run including score breakdown, metrics, and recommendations.
@@ -133,6 +135,7 @@ class RepositoryService:
             strengths_json=json.dumps(report.get("strengths", [])),
             weaknesses_json=json.dumps(report.get("weaknesses", [])),
             suggestions_json=json.dumps(report.get("suggestions", [])),
+            dependencies_json=json.dumps(dependency_scan.to_dict()) if dependency_scan else None,
         )
         db.add(metric)
         db.commit()

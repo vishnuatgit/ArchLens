@@ -556,3 +556,46 @@
     .compare-table tbody th { font-size: var(--fs-sm); }
     .diff { min-width: 34px; padding: 2px 6px; }
 }
+
+/* --- Dependencies and known vulnerabilities --- */
+.dep-card, .vuln-card { margin-bottom: var(--space-5); }
+.dep-summary { margin: 0 0 var(--space-3); }
+.dep-group { border: 1px solid var(--border); border-radius: 10px; margin-bottom: var(--space-3); overflow: hidden; }
+.dep-group-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface-2); font-weight: 600; cursor: pointer; list-style: none; }
+.dep-group-head::-webkit-details-marker { display: none; }
+.dep-group-head .dim-chevron { margin-left: auto; }
+.dep-group[open] .dim-chevron { transform: rotate(180deg); }
+.dep-table th, .dep-table td { padding: 8px 14px; }
+.dep-table tbody th { font-weight: 500; overflow-wrap: anywhere; }
+.dep-spec { color: var(--text-2); overflow-wrap: anywhere; }
+.dep-pin { color: var(--text-3); font-size: var(--fs-sm); white-space: nowrap; }
+.dep-pin-yes { color: var(--good); }
+.dep-clear, .dep-clear .icon { color: var(--good); }
+
+.vuln-list { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.vuln { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.vuln-body { min-width: 0; flex: 1; }
+.vuln-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.vuln-id { font-weight: 600; }
+.vuln-pkg { color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.vuln-summary { margin: 4px 0 0; color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.vuln-fix { display: flex; gap: 6px; align-items: center; margin: 6px 0 0; color: var(--text-3); font-size: var(--fs-sm); }
+.vuln-fix .icon { width: 14px; height: 14px; flex-shrink: 0; }
+.vuln-fix-yes { color: var(--text); font-weight: 600; }
+.sev { flex-shrink: 0; min-width: 72px; padding: 2px 8px; border-radius: var(--radius-full); border: 1px solid var(--border-strong); background: var(--surface-3); color: var(--text-2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.04em; text-align: center; text-transform: uppercase; }
+.sev-critical, .sev-high { color: var(--bad); background: var(--bad-bg); border-color: var(--bad-border); }
+.sev-medium { color: var(--warn); background: var(--warn-bg); border-color: var(--warn-border); }
+.sev-low { color: var(--info); background: var(--info-bg); border-color: var(--info-border); }
+@media (max-width: 560px) {
+    .vuln { flex-direction: column; gap: 8px; }
+}
+.dep-table { table-layout: fixed; }
+.dep-table th:nth-child(1) { width: 34%; }
+.dep-table th:nth-child(2) { width: 28%; }
+.dep-table th:nth-child(3) { width: 20%; }
+@media (max-width: 560px) {
+    .dep-table { min-width: 460px; }
+}
+.vuln-more { margin-bottom: var(--space-3); }
+.vuln-more > summary { display: inline-flex; margin-bottom: 8px; cursor: pointer; list-style: none; }
+.vuln-more > summary::-webkit-details-marker { display: none; }

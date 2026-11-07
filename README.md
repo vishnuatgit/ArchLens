@@ -29,6 +29,7 @@ It is built to run on a free host such as Render's free tier, where the first vi
 - **Live progress.** The home page's "How it works" steps (fetch, check 7 dimensions, score, suggest) light up as the analysis runs, driven by real events streamed from the server as each of the six GitHub calls finishes. A reused report is marked as reused rather than re-run, a failed step says why ("Repository not found", "GitHub did not answer"), and a slow GitHub is announced. A report's "Analyze again" runs through the same live steps.
 - **Evidence for every point.** Each dimension opens to show its checks: passed, partial, missing, given or not scored, with what the scorer found (for example "Found 8 GitHub Actions workflow(s).") and the points earned.
 - **What to fix first, with points.** Every missing check becomes a fix with the points it would add (`+4` for adding a file, "up to +6" for things like commit activity), exact fixes first, and the score and grade they would lead to. Copy it as a Markdown checklist.
+- **Dependencies and known vulnerabilities.** The report lists the repository's direct dependencies per ecosystem (Python from `requirements*.txt` and `pyproject.toml`, npm from `package.json` with `package-lock.json`, Go from `go.mod`), says which are pinned to an exact version, and checks the pinned ones against [OSV.dev](https://osv.dev) (free, no key). Each vulnerability shows its severity, advisory link and the version to upgrade to. If OSV is down the report says "couldn't check" and the analysis still succeeds. This is shown in the report page, the JSON API (`dependency_scan`), the Markdown export and the CLI, and it does **not** change the 0-100 score, so older scores stay comparable. Only the repository root is read (no sub-folders), at most six files, so it costs one to six extra GitHub requests.
 - **Charts from real data.** A score gauge, a radar chart of the dimension profile, dimension bars, a language bar in GitHub's language colours, and a score history when a repository has been analyzed more than once.
 - **Compare two repositories** side by side at `/compare?a=owner/repo&b=owner/repo`: overlaid radar charts, a dimension table with differences, and each one's top fixes. Stored reports are reused, so comparing known repositories costs no GitHub requests.
 - **Share.** Copy a link, use the stable `/repo/{owner}/{repo}` permalink, export Markdown (copy, download or `GET /api/v1/analyses/{id}/markdown`), or add a README badge (`/badge/{owner}/{repo}.svg?profile=…`, never calls GitHub) with Markdown, HTML or URL snippets.
@@ -72,6 +73,7 @@ flowchart TD
 | Web framework | FastAPI (async), server-rendered Jinja2 templates |
 | GitHub client | httpx `AsyncClient`, shared for the app's lifetime |
 | Storage | SQLite via SQLAlchemy 2, migrations with Alembic |
+| Vulnerability data | OSV.dev (free API, no key; failures degrade to "couldn't check") |
 | CLI | Typer and Rich |
 | Front end | Plain CSS, inline SVG charts and one vanilla JavaScript file, no build step |
 | Quality | pytest (GitHub mocked, no network), Ruff, Black, GitHub Actions |

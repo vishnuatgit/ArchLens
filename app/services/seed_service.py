@@ -57,6 +57,9 @@ def export_example(analysis: Analysis) -> dict[str, Any]:
     for key, column in _METRIC_JSON_FIELDS.items():
         metrics[key] = json.loads(getattr(m, column) or "null")
 
+    if m.dependencies_json:
+        metrics["dependency_scan"] = json.loads(m.dependencies_json)
+
     return {
         "owner": analysis.repository.owner,
         "name": analysis.repository.name,
@@ -105,6 +108,9 @@ def seed_examples_if_empty(db: Session, path: Path = EXAMPLES_PATH) -> int:
         metric = Metric(
             analysis_id=analysis.id,
             last_pushed=datetime.fromisoformat(m["last_pushed"]) if m.get("last_pushed") else None,
+            dependencies_json=(
+                json.dumps(m["dependency_scan"]) if m.get("dependency_scan") else None
+            ),
             **{field: m[field] for field in _METRIC_FIELDS},
             **{column: json.dumps(m[key]) for key, column in _METRIC_JSON_FIELDS.items()},
         )
