@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.exception_handlers import http_exception_handler
+from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -116,6 +117,14 @@ async def not_found_page_handler(request: Request, exc: StarletteHTTPException):
             request=request, name="404.html", context={}, status_code=404
         )
     return await http_exception_handler(request, exc)
+
+
+@app.exception_handler(RequestValidationError)
+async def page_validation_handler(request: Request, exc: RequestValidationError):
+    """A malformed address such as /analysis/abc is a missing page, not a JSON error, for browsers."""
+    if is_api_request(request) or request.url.path.startswith("/badge/"):
+        return await request_validation_exception_handler(request, exc)
+    return templates.TemplateResponse(request=request, name="404.html", context={}, status_code=404)
 
 
 @app.get("/favicon.ico", include_in_schema=False)

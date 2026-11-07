@@ -241,6 +241,18 @@ class TestApiErrors:
         )
         assert response.status_code == 422
 
+    def test_huge_analysis_id_is_a_json_404_not_a_server_error(self, client):
+        for path in (
+            "/api/v1/analyses/99999999999999999999",
+            "/api/v1/analyses/99999999999999999999/markdown",
+        ):
+            response = client.get(path)
+            assert response.status_code == 404
+            assert response.json()["error_code"] == "ANALYSIS_NOT_FOUND"
+
+    def test_huge_list_offset_is_a_validation_error(self, client):
+        assert client.get("/api/v1/analyses?offset=99999999999999999999").status_code == 422
+
     def test_list_filter_rejects_unknown_repo_type(self, client):
         assert client.get("/api/v1/analyses?repo_type=banana").status_code == 422
 

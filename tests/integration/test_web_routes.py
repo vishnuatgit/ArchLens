@@ -399,6 +399,27 @@ class TestHistoryRows:
     def test_out_of_range_pagination_is_clamped(self, client):
         assert client.get("/history?offset=-5&limit=100000").status_code == 200
 
+    @pytest.mark.parametrize(
+        "query", ["offset=abc&limit=-x", "offset=99999999999999999999", "limit=1.5"]
+    )
+    def test_hand_edited_pagination_falls_back_to_a_page(self, client, query):
+        response = client.get(f"/history?{query}")
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/analysis/abc",
+            "/analysis/99999999999999999999",
+            "/analysis/99999999999999999999/report.md",
+        ],
+    )
+    def test_malformed_or_huge_report_id_is_a_not_found_page(self, client, path):
+        response = client.get(path)
+        assert response.status_code == 404
+        assert "text/html" in response.headers["content-type"]
+
 
 class TestDemoQuotas:
     @pytest.fixture()
