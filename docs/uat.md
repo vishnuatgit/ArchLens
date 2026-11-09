@@ -4,7 +4,7 @@
 
 Three to five people who have never seen ArchLens. Mix them:
 
-- one or two students or junior developers (like recruiters' typical reviewers of GitHub profiles),
+- one or two students or junior developers (typical reviewers of GitHub profiles),
 - one person who is not a developer but can read a project page,
 - if possible, one person who maintains an open-source or personal project.
 
