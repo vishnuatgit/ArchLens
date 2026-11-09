@@ -67,3 +67,38 @@ Mark each task Pass or Fail. Note first-visit wake-up wait separately in the Not
 Tested by: ____________________  Date: ____________  Testers: ____  Overall result (all tasks passed by at least 80% of testers): Yes / No
 
 Signature: ____________________
+
+## Automated acceptance check (2026-11-09)
+> Automated stand-in, not a real-user test: a scripted browser ran each task on the live demo. It shows each task *can* be completed, not that people understand the page. The real-user results table above is still to be filled.
+
+Live demo, Playwright with Chrome, phone 390x844 and desktop 1280x800. One new analysis (psf/requests, report #4); the desktop run reused it. Server was already awake (home loaded in under 1 s).
+
+| Task | phone 390px | desktop 1280px | notes |
+|---|---|---|---|
+| T1 What it does | Pass (h1 "How healthy is your codebase?" plus "scores ... GitHub repo ... out of 100 ... what to fix first" visible on load, 0.9 s). Understanding: n/a (needs a person) | Pass (0.8 s). Understanding: n/a (needs a person) | Machine check covers only that the text is on screen. |
+| T2 Check a repository | Pass (chip "psf/requests" then "Analyze repo" reached /analysis/4 with 77/100 in 8.0 s) | Pass (5.8 s, report reused) | Unaided: n/a (needs a person). |
+| T3 Understand the result | Pass for presence (score, "Top fix", "What to fix first" list with +points). Understanding: n/a (needs a person) | Same | Fix list is explicit: 6 items, first is "Commit a dependency lockfile", +4. |
+| T4 Why the score | Pass ("Scoring" link opens a page with every dimension; report also has expandable "Dimension scores" and "How this is scored") | Pass | What the tester says they learned: n/a (needs a person). |
+| T5 Keep, share or compare | Pass ("Copy link" present and clickable; also Export, Compare, badge Markdown/HTML/URL with Copy) | Pass ("Compare" opens /compare) | Clipboard content not verified. |
+
+Bonus: typing `hello world` shows "Use owner/repo or a github.com URL, for example https://github.com/psf/requests." (clear, gives a fix).
+
+### Accessibility (axe-core 4.10.2)
+Pages scanned at both sizes: home, report (/analysis/4), /scoring, /about (8 scans). No critical violations.
+
+| Impact | Count (rule instances) |
+|---|---|
+| critical | 0 |
+| serious | 3 rules over 4 scans (scrollable-region-focusable x2 report scans, 3 nodes; link-in-text-block x2 about scans, 2 nodes) |
+| moderate | 1 rule over 2 scans (landmark-complementary-is-top-level, home) |
+| minor | 0 |
+
+- `scrollable-region-focusable` (serious, report): a scrollable area (likely the dependency table, 2 nodes on phone, 1 on desktop) cannot be reached by keyboard. Fix with `tabindex="0"` and a label.
+- `link-in-text-block` (serious, about): a link inside body text is told apart from the text by colour only. Add an underline.
+- `landmark-complementary-is-top-level` (moderate, home): an `<aside>` is nested inside another landmark.
+- /scoring had no violations.
+
+Fixed the same day: scrollable-region-focusable, link-in-text-block, landmark-complementary-is-top-level; a local re-scan shows 0 violations on these pages.
+
+### Bugs found
+None in the five tasks. The three accessibility items above are the only defects.

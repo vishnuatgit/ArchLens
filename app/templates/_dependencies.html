@@ -43,7 +43,7 @@
     {% for ecosystem, members in scan.by_ecosystem() %}
     <details class="dep-group"{% if members|length <= 12 %} open{% endif %}>
         <summary class="dep-group-head"><span>{{ ecosystem }}</span><span class="count-pill">{{ members|length }}</span>{{ ui.icon("chevron-down", "icon dim-chevron") }}</summary>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="{{ ecosystem }} dependencies">
             <table class="table dep-table">
                 <thead><tr><th scope="col">Package</th><th scope="col">Declared</th><th scope="col">Version</th><th scope="col">Status</th></tr></thead>
                 <tbody>
