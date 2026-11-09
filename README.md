@@ -1,6 +1,6 @@
 # ArchLens
 
-**Scores any public GitHub repo's engineering health out of 100 and says what to fix first.**
+**Know how healthy any GitHub repo is, and what to fix first.** It scores any public repository's engineering health out of 100.
 
 A FastAPI web app, REST API and CLI. It reads a repository's metadata and dependency files through the GitHub REST API (it never clones code), scores it across seven dimensions, explains every point, and stores every new analysis in SQLite so reports can be revisited, compared and shared.
 
@@ -333,6 +333,8 @@ ArchLens/
 ├── docs/
 │   ├── process-flows.md        # Every user and system flow, with diagrams
 │   ├── roadmap.md              # What was built next, and what was left out
+│   ├── sdlc.md                 # How it was planned, designed, built, tested and shipped
+│   ├── uat.md                  # User acceptance test: tasks, pass criteria, results
 │   ├── walkthroughs/           # One write-up per feature
 │   └── screenshots/            # Images used in this README
 ├── scripts/                    # Example-report builder and seeding helpers

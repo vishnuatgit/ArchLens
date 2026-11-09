@@ -550,7 +550,7 @@
                 if (!response.body) { analyzeForm.submit(); return null; }
                 return readStream(response);
             }).catch(function () {
-                fail('Could not reach ArchLens. Check your connection and try again.');
+                fail('Could not reach ArchLens. The free server may be waking up, which can take about a minute. Try again shortly, or check your connection.');
             });
         });
 
