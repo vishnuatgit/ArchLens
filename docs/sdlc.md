@@ -1,6 +1,6 @@
 # Software development lifecycle: ArchLens
 
-ArchLens scores a public GitHub repository's engineering health out of 100 and lists what to fix first. It is a FastAPI web app, REST API and CLI, written by one person (Chandana Vishnu Jayanth). Work was iterative. The first commits (2026-06-24 to 2026-07-27) went straight to `main`. From 2026-10-23 the history shows short-lived branches merged through pull requests. The first commit is dated 2026-06-24 and the latest 2026-11-07. The repository has 74 commits. Ten are merge commits for pull requests #3 to #12, and pull request #1 was squash-merged (its title ends in "(#1)"). `git log` does not show what happened to #2.
+ArchLens scores a public GitHub repository's engineering health out of 100 and lists what to fix first. It is a FastAPI web app, REST API and CLI, written by one person (Chandana Vishnu Jayanth). Work was iterative. The first commits (2026-06-24 to 2026-07-27) went straight to `main`. From 2026-10-23 the history shows short-lived branches merged through pull requests. The first commit is dated 2026-06-24 and the latest 2026-11-09. The repository has 76 commits. Eleven are merge commits for pull requests #3 to #13, and pull request #1 was squash-merged (its title ends in "(#1)"). `git log` does not show what happened to #2.
 
 ## 1. Planning and requirements
 
@@ -22,7 +22,7 @@ ArchLens scores a public GitHub repository's engineering health out of 100 and l
 - **Stack.** Python 3.11 or newer. Runtime versions are pinned in [requirements.txt](../requirements.txt): fastapi 0.138.1, uvicorn 0.49.0, pydantic 2.13.4, sqlalchemy 2.0.51, alembic 1.18.5, httpx 0.28.1, jinja2 3.1.6, typer 0.27.0, rich 15.0.0. Dev tools are pinned in [requirements-dev.txt](../requirements-dev.txt): pytest 9.1.1, ruff 0.17.2, black 26.10.1. [pyproject.toml](../pyproject.toml) holds only lower bounds.
 - **Layout.** `app/` (routers, services, models, schemas, templates, static), `alembic/`, `tests/`, `scripts/`, `docs/`. The front end has no build step.
 - **Standards.** Ruff and Black with a line length of 100 ([pyproject.toml](../pyproject.toml)). [.pre-commit-config.yaml](../.pre-commit-config.yaml) runs them locally, and CI runs them again. [CONTRIBUTING.md](../CONTRIBUTING.md) describes the flow.
-- **Branches.** Merged branches seen in merge messages: `add-mit-license`, `readme-license`, `readme-case-study`, `fix/functionality`, `auto-deploy`, `feat/dependency-vulnerabilities`, `feat/github-action`, `feat/perf-and-postgres`, `proofread`, `pin-dependencies`. 52 non-merge commits sit directly on `main`'s first-parent line, most from before pull requests started, so many changes were committed to `main` directly.
+- **Branches.** Merged branches seen in merge messages: `add-mit-license`, `readme-license`, `readme-case-study`, `fix/functionality`, `auto-deploy`, `feat/dependency-vulnerabilities`, `feat/github-action`, `feat/perf-and-postgres`, `proofread`, `pin-dependencies`, `docs-sdlc-uat`. 52 non-merge commits sit directly on `main`'s first-parent line, most from before pull requests started, so many changes were committed to `main` directly.
 
 ## 4. Testing
 
