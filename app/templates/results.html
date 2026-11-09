@@ -426,13 +426,13 @@
             <button type="button" class="tab" role="tab" id="tab-badge-url" aria-controls="panel-badge-url" aria-selected="false">Image URL</button>
         </div>
         <div class="tab-panel" id="panel-badge-md" role="tabpanel" aria-labelledby="tab-badge-md">
-            <div class="snippet"><pre id="badge-markdown">{{ badge_markdown }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-markdown" data-copied="Badge Markdown copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
+            <div class="snippet"><pre id="badge-markdown" tabindex="0" role="region" aria-label="Badge Markdown snippet">{{ badge_markdown }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-markdown" data-copied="Badge Markdown copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
         </div>
         <div class="tab-panel" id="panel-badge-html" role="tabpanel" aria-labelledby="tab-badge-html">
-            <div class="snippet"><pre id="badge-html">{{ badge_html }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-html" data-copied="Badge HTML copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
+            <div class="snippet"><pre id="badge-html" tabindex="0" role="region" aria-label="Badge HTML snippet">{{ badge_html }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-html" data-copied="Badge HTML copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
         </div>
         <div class="tab-panel" id="panel-badge-url" role="tabpanel" aria-labelledby="tab-badge-url">
-            <div class="snippet"><pre id="badge-url">{{ badge_url }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-url" data-copied="Badge URL copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
+            <div class="snippet"><pre id="badge-url" tabindex="0" role="region" aria-label="Badge URL snippet">{{ badge_url }}</pre><button type="button" class="btn btn-sm" data-copy-from="#badge-url" data-copied="Badge URL copied">{{ ui.icon("copy") }}<span class="btn-label">Copy</span></button></div>
         </div>
     </section>
 {% if timeline|length > 1 %}

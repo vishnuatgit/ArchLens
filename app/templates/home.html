@@ -136,7 +136,7 @@
         </section>
     </div>
 
-    <aside class="hero-side" aria-label="{% if featured and featured.is_example %}Example report{% else %}Latest report{% endif %}">
+    <div class="hero-side" role="group" aria-label="{% if featured and featured.is_example %}Example report{% else %}Latest report{% endif %}">
         {% if featured %}
         {% set tier = featured.tier %}
         <a href="/analysis/{{ featured.id }}" class="card preview-card" id="featured-report">
@@ -194,7 +194,7 @@
             </div>
         </div>
         {% endif %}
-    </aside>
+    </div>
 </section>
 
 <!-- Where the 100 points come from: the dimension weights, straight from the scorer -->
