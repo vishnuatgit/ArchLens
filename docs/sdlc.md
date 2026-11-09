@@ -26,12 +26,12 @@ ArchLens scores a public GitHub repository's engineering health out of 100 and l
 
 ## 4. Testing
 
-`python -m pytest --collect-only -q` in the repo's `.venv` collected 330 tests. CI runs them ([ci.yml](../.github/workflows/ci.yml)).
+`python -m pytest --collect-only -q` in the repo's `.venv` collected 332 tests. CI runs them ([ci.yml](../.github/workflows/ci.yml)).
 
 | Level | What it covers | Where | Count |
 | :--- | :--- | :--- | --: |
 | Unit | Scorer, scoring guide, evidence, dependency parsers, GitHub client, rate limiter, CLI, badge, export, `action.yml`, migrations | [tests/unit](../tests/unit) (16 files) | 180 |
-| Integration | Every page and API route, user flows, progress stream, with GitHub mocked | [tests/integration](../tests/integration) (7 files) | 150 |
+| Integration | Every page and API route, user flows, progress stream, with GitHub mocked | [tests/integration](../tests/integration) (7 files) | 152 |
 | of which DB portability and end-to-end | Database portability (12), dependency end-to-end through the API (7) | `test_database_portability.py`, `test_dependencies_e2e.py` | 19, counted in the 150 |
 | PostgreSQL run | Same suite on PostgreSQL 16, plus migrations up, down, up | `test-postgres` job in CI | CI only |
 | Coverage | `pytest --cov=app`, printed per run; no minimum is set | `test` job (Python 3.11 and 3.12) | CI only |
