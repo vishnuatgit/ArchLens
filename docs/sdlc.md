@@ -26,12 +26,12 @@ ArchLens scores a public GitHub repository's engineering health out of 100 and l
 
 ## 4. Testing
 
-`python -m pytest --collect-only -q` in the repo's `.venv` collected 330 tests. CI runs them ([ci.yml](../.github/workflows/ci.yml)).
+`python -m pytest --collect-only -q` in the repo's `.venv` collected 332 tests. CI runs them ([ci.yml](../.github/workflows/ci.yml)).
 
 | Level | What it covers | Where | Count |
 | :--- | :--- | :--- | --: |
 | Unit | Scorer, scoring guide, evidence, dependency parsers, GitHub client, rate limiter, CLI, badge, export, `action.yml`, migrations | [tests/unit](../tests/unit) (16 files) | 180 |
-| Integration | Every page and API route, user flows, progress stream, with GitHub mocked | [tests/integration](../tests/integration) (7 files) | 150 |
+| Integration | Every page and API route, user flows, progress stream, with GitHub mocked | [tests/integration](../tests/integration) (7 files) | 152 |
 | of which DB portability and end-to-end | Database portability (12), dependency end-to-end through the API (7) | `test_database_portability.py`, `test_dependencies_e2e.py` | 19, counted in the 150 |
 | PostgreSQL run | Same suite on PostgreSQL 16, plus migrations up, down, up | `test-postgres` job in CI | CI only |
 | Coverage | `pytest --cov=app`, printed per run; no minimum is set | `test` job (Python 3.11 and 3.12) | CI only |
@@ -74,6 +74,5 @@ flowchart LR
 - **No staging environment.** Merges to `main` deploy to the only environment. Next step: add a second Render service or preview deploys for pull requests.
 - **Single author, no peer review.** The repository does not record a review by another person. Next step: ask a reviewer for a pass on the next pull request.
 - **Early work on `main` directly.** Branch protection is not visible in the repo. Next step: require pull requests and passing checks on `main`.
-- **Tool versions differ.** Pre-commit uses black 24.4.2 and ruff 0.4.9, while CI uses black 26.10.1 and ruff 0.17.2. Next step: align them.
 - **No coverage threshold and no automated dependency updates.** Next step: set `--cov-fail-under` and enable Dependabot.
 - **Demo data is ephemeral.** Next step: point `DATABASE_URL` at a managed database if history should persist.

@@ -102,7 +102,8 @@ class RateLimitExceededError(ArchLensError):
         minutes = _minutes_until(reset_epoch)
         wait = f"in about {_plural(minutes, 'minute')}" if minutes else "later"
         super().__init__(
-            f"GitHub API rate limit exceeded for this server. Please try again {wait}, "
+            "GitHub API rate limit exceeded: this server shares GitHub's anonymous API limit "
+            f"with every visitor, and it has run out for now. Please try again {wait}, "
             "or browse the example reports in the meantime."
         )
         self.reset_epoch = reset_epoch

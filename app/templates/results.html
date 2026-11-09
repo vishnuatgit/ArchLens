@@ -88,6 +88,10 @@
             {{ ui.grade_badge(report.grade, "lg") }}
             {{ ui.tier_badge(tier) }}
         </div>
+        {% if fix_plan and fix_plan.fixes %}
+        {% set top_fix = fix_plan.fixes[0] %}
+        <p class="top-fix small" data-top-fix>Top fix: <a href="#fix-title">{{ top_fix.action }}</a> <span class="gain {% if top_fix.exact %}gain-exact{% endif %}">{% if not top_fix.exact %}up to {% endif %}+{{ top_fix.gain }} points</span></p>
+        {% endif %}
     </section>
 
     <section class="card summary-card" aria-labelledby="summary-title">
