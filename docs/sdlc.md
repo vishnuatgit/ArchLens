@@ -74,6 +74,5 @@ flowchart LR
 - **No staging environment.** Merges to `main` deploy to the only environment. Next step: add a second Render service or preview deploys for pull requests.
 - **Single author, no peer review.** The repository does not record a review by another person. Next step: ask a reviewer for a pass on the next pull request.
 - **Early work on `main` directly.** Branch protection is not visible in the repo. Next step: require pull requests and passing checks on `main`.
-- **Tool versions differ.** Pre-commit uses black 24.4.2 and ruff 0.4.9, while CI uses black 26.10.1 and ruff 0.17.2. Next step: align them.
 - **No coverage threshold and no automated dependency updates.** Next step: set `--cov-fail-under` and enable Dependabot.
 - **Demo data is ephemeral.** Next step: point `DATABASE_URL` at a managed database if history should persist.

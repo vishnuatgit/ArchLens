@@ -27,6 +27,7 @@ from app.models import db_models  # noqa: F401
 from app.models.db_models import Analysis, Metric, Repository
 from app.repositories.db import Base, get_db
 from app.services.analysis_service import AnalysisService
+from app.services.evidence import Fix, FixPlan
 from app.services.rate_limiter import SlidingWindowRateLimiter
 from main import app
 from tests.integration.conftest import override_get_db, test_engine
@@ -194,6 +195,20 @@ class TestResultsPage:
     def test_results_page_shows_score(self, client, seeded_analysis):
         response = client.get(f"/analysis/{seeded_analysis.id}")
         assert b"72" in response.content
+
+    def test_results_page_shows_top_fix_near_score(self, client, seeded_analysis):
+        fix = Fix("Add a LICENSE file", "License", "community", "Community", 7, True)
+        plan = FixPlan(fixes=(fix,), exact_gain=7, projected_score=79, projected_grade="B")
+        with patch("app.routers.web.build_fix_plan", return_value=plan):
+            html = client.get(f"/analysis/{seeded_analysis.id}").text
+        assert "data-top-fix" in html
+        assert "Add a LICENSE file" in html.split("data-top-fix")[1].split("</p>")[0]
+        assert "+7 points" in html
+
+    def test_results_page_omits_top_fix_without_fixes(self, client, seeded_analysis):
+        with patch("app.routers.web.build_fix_plan", return_value=None):
+            html = client.get(f"/analysis/{seeded_analysis.id}").text
+        assert "data-top-fix" not in html
 
     def test_results_page_shows_strengths(self, client, seeded_analysis):
         response = client.get(f"/analysis/{seeded_analysis.id}")
