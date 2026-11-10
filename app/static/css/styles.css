@@ -761,6 +761,7 @@ kbd {
 
 /* --- Score gauge --- */
 .gauge {
+    display: block;
     position: relative;
     width: var(--gauge-size, 168px);
     aspect-ratio: 1;
