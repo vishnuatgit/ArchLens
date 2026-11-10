@@ -69,7 +69,7 @@ flowchart LR
 
 ## 7. Gaps and next steps
 
-- **No UAT.** Nobody other than the author is recorded as having tried the app. Next step: run the task list in [uat.md](uat.md) with three to five people and record the results there.
+- **No UAT.** Nobody other than the author is recorded as having tried the app. Next step: test the main tasks with three to five people and note where they get stuck.
 - **No browser tests.** Next step: add a small Playwright smoke test for the analyze flow.
 - **No staging environment.** Merges to `main` deploy to the only environment. Next step: add a second Render service or preview deploys for pull requests.
 - **Single author, no peer review.** The repository does not record a review by another person. Next step: ask a reviewer for a pass on the next pull request.

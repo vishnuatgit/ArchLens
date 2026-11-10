@@ -334,7 +334,6 @@ ArchLens/
 │   ├── process-flows.md        # Every user and system flow, with diagrams
 │   ├── roadmap.md              # What was built next, and what was left out
 │   ├── sdlc.md                 # How it was planned, designed, built, tested and shipped
-│   ├── uat.md                  # User acceptance test: tasks, pass criteria, results
 │   ├── walkthroughs/           # One write-up per feature
 │   └── screenshots/            # Images used in this README
 ├── scripts/                    # Example-report builder and seeding helpers
